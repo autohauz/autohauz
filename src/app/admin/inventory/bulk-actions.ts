@@ -188,8 +188,9 @@ export async function processBulkUpload(formData: FormData) {
         .then(() => { /* no-op */ });
     }
 
-    revalidateTag("vehicles");
-    revalidateTag("public");
+    const revalidate = revalidateTag as (tag: string) => void;
+    revalidate("vehicles");
+    revalidate("public");
     revalidatePath("/admin/inventory");
 
     return { 
