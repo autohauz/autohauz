@@ -104,6 +104,16 @@ export const vehicleCsvRowSchema = z.object({
   price: z.coerce.number().positive(),
   exterior_color: z.string().trim().optional(),
   description: z.string().trim().optional(),
+  engine: z.string().trim().optional(),
+  power_kw: optionalPositiveInt(3000),
+  seats: optionalPositiveInt(20),
+  doors: optionalPositiveInt(10),
+  interior: z.string().trim().optional(),
+  vin: z.string().trim().optional(),
+  registration: z.string().trim().optional(),
+  rego_expiry: z.string().date().optional().or(z.literal("")),
+  safety_rating: z.string().trim().optional(),
+  warranty_text: z.string().trim().optional(),
 });
 
 export type VehicleCreateInput = z.infer<typeof vehicleCreateSchema>;

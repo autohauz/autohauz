@@ -62,8 +62,61 @@ export async function processBulkUpload(formData: FormData) {
     const errors: string[] = [];
     const parsedRows: any[] = [];
 
+    const transmissionMap: Record<string, string> = {
+      "auto": "automatic",
+      "automatic": "automatic",
+      "manual": "manual",
+      "cvt": "cvt",
+      "dct": "dct"
+    };
+
+    const driveTypeMap: Record<string, string> = {
+      "fwd": "fwd",
+      "front wheel drive": "fwd",
+      "rwd": "rwd",
+      "rear wheel drive": "rwd",
+      "awd": "awd",
+      "all wheel drive": "awd",
+      "four_wd": "four_wd",
+      "4wd": "four_wd",
+      "4x4": "four_wd"
+    };
+
+    const bodyTypeMap: Record<string, string> = {
+      "sedan": "sedan",
+      "hatch": "hatch",
+      "hatchback": "hatch",
+      "suv": "suv",
+      "ute": "ute",
+      "utility": "ute",
+      "wagon": "wagon",
+      "coupe": "coupe",
+      "convertible": "convertible",
+      "cabriolet": "convertible",
+      "van": "van",
+      "people_mover": "people_mover",
+      "people mover": "people_mover"
+    };
+
+    const fuelTypeMap: Record<string, string> = {
+      "petrol": "petrol",
+      "unleaded": "petrol",
+      "diesel": "diesel",
+      "hybrid": "hybrid",
+      "phev": "phev",
+      "plug-in hybrid": "phev",
+      "electric": "electric",
+      "ev": "electric",
+      "lpg": "lpg"
+    };
+
     // 1. Parse and validate rows
     rows.forEach((row, index) => {
+      const fuelRaw = String(row["Fuel Type"] || row["fuel_type"] || "").toLowerCase().trim();
+      const transRaw = String(row["Transmission"] || row["transmission"] || "").toLowerCase().trim();
+      const bodyRaw = String(row["Body Type"] || row["body_type"] || "").toLowerCase().trim();
+      const driveRaw = row["Drive Type"] || row["drive_type"] ? String(row["Drive Type"] || row["drive_type"]).toLowerCase().trim() : undefined;
+
       // Map columns based on our template
       const mapped = {
         stock_id: String(row["Stock ID"] || row["stock_id"] || ""),
@@ -72,12 +125,22 @@ export async function processBulkUpload(formData: FormData) {
         variant: row["Variant"] ? String(row["Variant"]) : undefined,
         year: parseInt(row["Year"] || row["year"] || "0"),
         mileage_km: parseInt(row["Mileage (km)"] || row["mileage_km"] || "0"),
-        fuel_type: String(row["Fuel Type"] || row["fuel_type"] || "").toLowerCase(),
-        transmission: String(row["Transmission"] || row["transmission"] || "").toLowerCase(),
-        body_type: String(row["Body Type"] || row["body_type"] || "").toLowerCase(),
-        drive_type: row["Drive Type"] ? String(row["Drive Type"]).toLowerCase() : undefined,
+        fuel_type: fuelTypeMap[fuelRaw] || fuelRaw,
+        transmission: transmissionMap[transRaw] || transRaw,
+        body_type: bodyTypeMap[bodyRaw] || bodyRaw,
+        drive_type: driveRaw ? (driveTypeMap[driveRaw] || driveRaw) : undefined,
         price: parseFloat(row["Price"] || row["price"] || "0"),
         exterior_color: row["Exterior Color"] ? String(row["Exterior Color"]) : undefined,
+        engine: row["Engine"] || row["engine"] ? String(row["Engine"] || row["engine"]) : undefined,
+        power_kw: row["Power (kW)"] || row["power_kw"] ? parseInt(row["Power (kW)"] || row["power_kw"]) : undefined,
+        seats: row["Seats"] || row["seats"] ? parseInt(row["Seats"] || row["seats"]) : undefined,
+        doors: row["Doors"] || row["doors"] ? parseInt(row["Doors"] || row["doors"]) : undefined,
+        interior: row["Interior"] || row["interior"] ? String(row["Interior"] || row["interior"]) : undefined,
+        vin: row["VIN"] || row["vin"] ? String(row["VIN"] || row["vin"]) : undefined,
+        registration: row["Registration"] || row["registration"] ? String(row["Registration"] || row["registration"]) : undefined,
+        rego_expiry: row["Rego Expiry"] || row["rego_expiry"] ? String(row["Rego Expiry"] || row["rego_expiry"]) : undefined,
+        safety_rating: row["Safety Rating"] || row["safety_rating"] ? String(row["Safety Rating"] || row["safety_rating"]) : undefined,
+        warranty_text: row["Warranty"] || row["warranty_text"] ? String(row["Warranty"] || row["warranty_text"]) : undefined,
         description: row["Description"] ? String(row["Description"]) : undefined,
       };
 
@@ -161,6 +224,16 @@ export async function processBulkUpload(formData: FormData) {
         drive_type: r.drive_type || null,
         price: r.price,
         exterior_color: r.exterior_color || null,
+        engine: r.engine || null,
+        power_kw: r.power_kw || null,
+        seats: r.seats || null,
+        doors: r.doors || null,
+        interior: r.interior || null,
+        vin: r.vin || null,
+        registration: r.registration || null,
+        rego_expiry: r.rego_expiry || null,
+        safety_rating: r.safety_rating || null,
+        warranty_text: r.warranty_text || null,
         description: r.description || null,
         status: "draft", // Imported vehicles start as draft
         published_at: null,
