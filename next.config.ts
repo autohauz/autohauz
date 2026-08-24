@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: process.cwd(),
   images: {
-    // Next.js image optimisation enabled — serves WebP/AVIF at correct size via /_next/image.
-    // sharp must be in dependencies (not devDependencies) for this to work in production.
+    // Next.js image optimisation disabled to bypass Vercel WAF limits
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     // 30-day cache — vehicle photos are immutable once uploaded.
     minimumCacheTTL: 2592000,
