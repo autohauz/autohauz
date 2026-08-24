@@ -27,7 +27,12 @@ const GENERIC_FALLBACK =
 
 /** Direct public URL for a media_assets.storage_key in the `media` bucket. */
 export function buildMediaUrl(supabaseUrl: string, storageKey: string): string {
-  return `${supabaseUrl}/storage/v1/object/public/${MEDIA_BUCKET}/${storageKey}`;
+  if (storageKey.startsWith("http://") || storageKey.startsWith("https://")) {
+    return storageKey;
+  }
+  const baseUrl = supabaseUrl.replace(/\/$/, "");
+  const encodedKey = storageKey.split('/').map(encodeURIComponent).join('/');
+  return `${baseUrl}/storage/v1/object/public/${MEDIA_BUCKET}/${encodedKey}`;
 }
 
 /** Body-type stock fallback (never a broken image). */
