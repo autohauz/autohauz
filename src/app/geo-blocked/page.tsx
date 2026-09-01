@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   description:
     "Cars365 is currently available only in Australia. Get in touch or join the waitlist to hear when we open in your country.",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
     nocache: true,
   },
   // Clears the root layout's `canonical: "/"` — this page must never claim to

@@ -155,7 +155,6 @@ function isSuspiciousUA(ua: string | null): boolean {
 function geoBlockHeaders(country: string): Headers {
   return new Headers({
     "Cache-Control": "private, no-store, max-age=0, must-revalidate",
-    "X-Robots-Tag": "noindex, nofollow, noarchive",
     "X-Geo-Blocked": country,
   });
 }
@@ -222,10 +221,6 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  if (isNonPublicPath) {
-    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-  }
-
   // Remove fingerprinting headers injected by Node/Next at the edge layer.
   // (next.config.ts handles the server-rendered path; this covers edge.)
   response.headers.delete("x-powered-by");
@@ -248,10 +243,6 @@ export async function proxy(request: NextRequest) {
           request.cookies.set(name, value),
         );
         response = NextResponse.next({ request });
-        // Re-apply security headers after response is recreated
-        if (isNonPublicPath) {
-          response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-        }
         response.headers.delete("x-powered-by");
         response.headers.delete("server");
         cookiesToSet.forEach(({ name, value, options }) =>
