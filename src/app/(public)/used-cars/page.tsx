@@ -9,7 +9,7 @@ import { listingMetadata } from "@/lib/seo/listing";
 
 const TITLE = "Used Cars for Sale in Sydney, NSW";
 const DESCRIPTION =
-  "Browse quality, inspected used cars for sale in Granville, Sydney. Filter by make, model, body type and price, with finance and trade-ins available Australia-wide.";
+  "Browse quality, inspected used cars for sale in Lansvale, Sydney. Filter by make, model, body type and price, with finance and trade-ins available Australia-wide.";
 
 export const revalidate = 60;
 

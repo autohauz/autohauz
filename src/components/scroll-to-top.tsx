@@ -26,11 +26,10 @@ export function ScrollToTop() {
   const scrollY = useScrollPosition();
   const prefersReduced = useReducedMotion();
   const { isStickyCtaVisible, isMobileNavOpen, isModalOpen } = useMobileState();
-  const [viewportHeight, setViewportHeight] = useState(() => 
-    typeof window !== "undefined" ? window.innerHeight : 0
-  );
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   useEffect(() => {
+    setViewportHeight(window.innerHeight);
     const handleResize = () => setViewportHeight(window.innerHeight);
     window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);

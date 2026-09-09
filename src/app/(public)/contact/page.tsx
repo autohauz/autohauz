@@ -10,9 +10,9 @@ import { pageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = pageMetadata({
   path: "/contact",
-  title: "Contact Cars365 — Granville, NSW",
+  title: "Contact Cars365 — Lansvale, NSW",
   description:
-    "Get in touch — call, WhatsApp, or send us a message. Visit our Granville, Sydney showroom. We reply fast during business hours.",
+    "Get in touch — call, WhatsApp, or send us a message. Visit our Lansvale, Sydney showroom. We reply fast during business hours.",
 });
 
 export const revalidate = 3600;

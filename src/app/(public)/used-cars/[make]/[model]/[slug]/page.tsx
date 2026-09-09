@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   // title and pushed the model name past Google's ~60-character truncation.
   const title = `${name} for Sale — ${formatPrice(v.price)}`;
 
-  const baseDesc = `${name} for sale in Granville, NSW. ${formatKm(v.mileageKm)}, ${TRANSMISSION_LABELS[v.transmission]}, ${FUEL_LABELS[v.fuelType]}, ${formatPrice(v.price)}.`;
+  const baseDesc = `${name} for sale in Lansvale, NSW. ${formatKm(v.mileageKm)}, ${TRANSMISSION_LABELS[v.transmission]}, ${FUEL_LABELS[v.fuelType]}, ${formatPrice(v.price)}.`;
   const extraDesc = v.description
     ? ` ${v.description.slice(0, 80).trim()}…`
     : " Inspected, roadworthy included and ready to drive away.";

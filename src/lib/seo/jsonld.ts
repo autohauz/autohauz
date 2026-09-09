@@ -155,7 +155,7 @@ export function organizationSchema(input: {
     },
     image: `${base}/og-image.jpg`,
     description:
-      "Cars365 sells quality, inspected used cars in Granville, NSW — transparent pricing, finance and trade-ins, serving buyers across Sydney and Australia.",
+      "Cars365 sells quality, inspected used cars in Lansvale, NSW — transparent pricing, finance and trade-ins, serving buyers across Sydney and Australia.",
     areaServed: { "@type": "Country", name: "Australia" },
     ...(input.phone
       ? {
@@ -380,8 +380,10 @@ export function autoDealerSchema(input: {
       : {
           address: {
             "@type": "PostalAddress",
-            addressLocality: "Granville",
+            streetAddress: "16 Hollywood Dr",
+            addressLocality: "Lansvale",
             addressRegion: "NSW",
+            postalCode: "2166",
             addressCountry: "AU",
           }
         }),

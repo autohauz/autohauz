@@ -7,9 +7,7 @@ import { useEffect, useState, useRef } from "react";
  * @validates Requirements 16.4
  */
 export function useScrollPosition(): number {
-  const [scrollY, setScrollY] = useState(() => 
-    typeof window !== "undefined" ? window.scrollY : 0
-  );
+  const [scrollY, setScrollY] = useState(0);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import { MobileAnimationProvider } from "@/components/mobile-animation-provider"
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { siteBaseUrl } from "@/lib/seo/site";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 
 // Both faces are variable fonts on Google Fonts. Omitting `weight` makes
 // next/font serve the single variable woff2 that covers the whole axis instead
@@ -51,8 +52,8 @@ export const metadata: Metadata = {
     template: "%s | Cars365 Australia",
   },
   description:
-    "Browse quality, inspected used cars for sale in Australia. Transparent pricing, finance available, trade-ins welcome, and a team that answers fast in Granville, NSW.",
-  keywords: ["used cars Australia", "cars for sale NSW", "second hand cars Sydney", "used SUV", "used ute", "car finance", "trade-in Granville"],
+    "Browse quality, inspected used cars for sale in Australia. Transparent pricing, finance available, trade-ins welcome, and a team that answers fast in Lansvale, NSW.",
+  keywords: ["used cars Australia", "cars for sale NSW", "second hand cars Sydney", "used SUV", "used ute", "car finance", "trade-in Lansvale"],
   metadataBase: new URL(siteBaseUrl()),
   // NOTE: no `alternates.canonical` here — on purpose.
   // Next.js inherits layout metadata into every descendant route, so declaring
@@ -89,7 +90,7 @@ export const metadata: Metadata = {
     siteName: "Cars365 Australia",
     title: "Cars365 — Quality Used Cars in Australia",
     description:
-      "Browse premium, pre-inspected used cars with transparent pricing in Granville, NSW. Every vehicle includes a PPSR check, RWC, and statutory warranty.",
+      "Browse premium, pre-inspected used cars with transparent pricing in Lansvale, NSW. Every vehicle includes a PPSR check, RWC, and statutory warranty.",
     images: [
       {
         url: "/og-image.jpg",
@@ -134,6 +135,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-background text-foreground font-sans tracking-tight">
+        <div className="dark">
+          <AnnouncementBanner />
+        </div>
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <>
             <Script

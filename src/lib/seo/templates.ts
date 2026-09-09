@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/nav";
  * Title/description templates for the programmatic landing pages.
  *
  * All copy is Australian-English and geo-qualified with the dealership's real
- * trading location (Granville, in Sydney's west). Qualifying the title is what
+ * trading location (Lansvale, in Sydney's west). Qualifying the title is what
  * makes these pages competitive for the "<thing> for sale <place>" queries
  * Australian car buyers actually type, instead of fighting national aggregators
  * on the bare head term.
@@ -13,7 +13,7 @@ import { formatPrice } from "@/lib/nav";
  * "| Cars365 Australia" — so keep them under ~45 characters of their own.
  */
 
-const LOCATION = "Granville, NSW";
+const LOCATION = "Lansvale, NSW";
 
 /**
  * Pluralises a body-type label for use in a heading.
@@ -40,7 +40,7 @@ export function makeModelTitle(make: string, model: string) {
 }
 
 export function makeModelDescription(make: string, model: string) {
-  return `Find the best deals on used ${make} ${model} cars in Granville, Sydney. Every car is fully inspected and comes with a roadworthy certificate.`;
+  return `Find the best deals on used ${make} ${model} cars in Lansvale, Sydney. Every car is fully inspected and comes with a roadworthy certificate.`;
 }
 
 export function budgetTitle(budget: number) {
@@ -56,5 +56,5 @@ export function bodyTypeTitle(body: string) {
 }
 
 export function bodyTypeDescription(body: string) {
-  return `Browse quality used ${pluralBodyLabel(body).toLowerCase()} for sale in Granville, Sydney. Transparent pricing, roadworthy certificate included, finance and trade-ins available.`;
+  return `Browse quality used ${pluralBodyLabel(body).toLowerCase()} for sale in Lansvale, Sydney. Transparent pricing, roadworthy certificate included, finance and trade-ins available.`;
 }

@@ -120,7 +120,7 @@ export async function SiteFooter() {
               ) : null}
               <li>
                 <a
-                  href="https://maps.app.goo.gl/DDS6skBgYzMTpU916?g_st=ic"
+                  href="https://maps.google.com/maps?q=16+Hollywood+Dr,+Lansvale+NSW+2166,+Australia"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-start gap-2.5 transition-colors hover:text-white"
@@ -128,7 +128,7 @@ export async function SiteFooter() {
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/5 group-hover:bg-yellow-400/10 transition-colors">
                     <MapPin className="size-3.5 text-yellow-400" />
                   </span>
-                  <span>Cars 365, Granville NSW</span>
+                  <span>16 Hollywood Dr, Lansvale NSW 2166</span>
                 </a>
               </li>
             </ul>
@@ -137,7 +137,7 @@ export async function SiteFooter() {
             <div className="mt-6 overflow-hidden rounded-xl border border-white/10">
               <iframe
                 title="Cars 365 Location"
-                src="https://maps.google.com/maps?q=Cars%20365,%20Granville,%20NSW&t=&z=14&ie=UTF8&iwloc=&output=embed"
+                src="https://maps.google.com/maps?q=16%20Hollywood%20Dr,%20Lansvale%20NSW%202166,%20Australia&t=&z=14&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="150"
                 style={{ border: 0, display: "block", filter: "grayscale(30%) brightness(0.8) contrast(1.1)" }}

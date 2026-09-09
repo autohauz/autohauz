@@ -35,12 +35,12 @@ export const metadata: Metadata = {
     path: "/",
     title: "Used Cars for Sale in Sydney | Cars365 Australia",
     description:
-      "Browse quality, inspected used cars for sale in Granville, Sydney. Transparent pricing, roadworthy included, finance available and trade-ins welcome across Australia.",
+      "Browse quality, inspected used cars for sale in Lansvale, Sydney. Transparent pricing, roadworthy included, finance available and trade-ins welcome across Australia.",
     keywords: [
       "used cars for sale",
       "used cars Sydney",
       "second hand cars NSW",
-      "used car dealer Granville",
+      "used car dealer Lansvale",
       "cheap used cars Australia",
     ],
   }),
@@ -77,7 +77,7 @@ const FAQS = [
   { q: "Do you accept trade-ins?", a: "Yes! We accept trade-ins and provide fair, transparent market valuations to make upgrading to your new car as seamless as possible." },
   { q: "Can I sell my car without buying one?", a: "Definitely. We are always looking for quality used cars and can offer you a competitive price even if you don't buy from us." },
   { q: "Is finance available?", a: "Absolutely. We work with leading lenders to provide highly competitive and bespoke finance packages tailored to your budget." },
-  { q: "Where are you located?", a: "We are located at 12-14 Parramatta Rd, Granville NSW 2142." },
+  { q: "Where are you located?", a: "We are located at 16 Hollywood Dr, Lansvale NSW 2166, Australia." },
 ];
 
 /** Initials for a reviewer avatar when no photo is available (e.g. "Sarah M." → "SM"). */

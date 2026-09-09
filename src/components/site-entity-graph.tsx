@@ -11,7 +11,7 @@ import { autoDealerSchema, organizationSchema, websiteSchema } from "@/lib/seo/j
  *     dead rental-era `seo/schema.ts` and described the wrong business.
  *   • WebSite + SearchAction — makes the site eligible for a Google sitelinks
  *     searchbox, and was likewise never rendered anywhere.
- *   • AutoDealer    — the physical Granville storefront, linked to the brand
+ *   • AutoDealer    — the physical Lansvale storefront, linked to the brand
  *     via `parentOrganization` so the two don't compete as separate entities.
  *
  * All three carry stable `@id`s so per-page nodes (Vehicle offers, breadcrumbs,

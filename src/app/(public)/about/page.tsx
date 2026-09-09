@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = pageMetadata({
   path: "/about",
-  title: "About Cars365 — Used Car Dealer in Granville, NSW",
+  title: "About Cars365 — Used Car Dealer in Lansvale, NSW",
   description:
     "Learn about Cars365 — an Australian used-car dealership built on honest inspections, transparent pricing, and a team that helps you buy with confidence.",
 });
