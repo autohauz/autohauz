@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as xlsx from "xlsx";
 import { vehicleCsvRowSchema } from "@/lib/validation/vehicle";
@@ -354,6 +355,8 @@ export async function POST(request: NextRequest) {
       })
       .then(() => {});
 
+    revalidateTag("vehicles");
+    
     return NextResponse.json({ success: true, count: inserts.length, skipped: skippedRows.length });
   } catch (err) {
     console.error("Bulk upload API error:", err);
