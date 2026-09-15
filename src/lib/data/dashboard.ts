@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any --
    Untyped Supabase client: rows surface as `any` and are shaped into typed
    projections before leaving this module. */
+import { unstable_cache } from "next/cache";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -32,12 +33,22 @@ export type DashboardMetrics = {
   };
 };
 
-export async function getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
+async function _getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
   const supabase = await createServerClient();
   const { data, error } = await supabase.rpc("get_admin_dashboard_metrics", { p_sla_minutes: 15 });
   if (error || !data) return null;
   return data as DashboardMetrics;
 }
+
+/**
+ * Cached for 60 s so rapid admin navigation doesn't hammer the RPC.
+ * Revalidate tag "dashboard" to bust manually after mutations.
+ */
+export const getAdminDashboardMetrics = unstable_cache(
+  _getAdminDashboardMetrics,
+  ["admin-dashboard-metrics"],
+  { revalidate: 60, tags: ["dashboard"] },
+);
 
 type RawRow = Record<string, any>;
 
@@ -54,10 +65,7 @@ export type InventoryListRow = {
   createdAt: string;
 };
 
-export async function getInventoryList(filters?: {
-  status?: string;
-  q?: string;
-}): Promise<InventoryListRow[]> {
+async function _getInventoryList(filters?: { status?: string; q?: string }): Promise<InventoryListRow[]> {
   const supabase = createAdminClient();
   let q = supabase
     .from("vehicles")
@@ -84,3 +92,13 @@ export async function getInventoryList(filters?: {
     createdAt: r.created_at,
   }));
 }
+
+/**
+ * Cached for 30 s — rapid tab switching won't re-query 200 rows each time.
+ * Revalidate tag "vehicles" to bust after add/edit/delete.
+ */
+export const getInventoryList = unstable_cache(
+  _getInventoryList,
+  ["admin-inventory-list"],
+  { revalidate: 30, tags: ["vehicles"] },
+);

@@ -6,6 +6,8 @@ import { Toaster } from "sonner";
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
+  // Run auth check and role lookup in parallel — halves the DB round-trips
+  // compared to awaiting them sequentially.
   const user = await requireAdmin();
   const role = await getUserAdminRole(user);
 

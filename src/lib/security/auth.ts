@@ -105,15 +105,23 @@ export async function requireAdmin() {
 export async function requireAdminRole(allowedRoles: string[]) {
   const user = await requireUser();
 
-  // Check if they have an active admin role record for these specific roles
-  // or if they are an owner/admin (who can do everything)
-  const isGlobalAdmin = await userHasAdminRoleRecord(user.id, ["owner", "admin"]);
-  if (isGlobalAdmin || isAllowlistedAdminEmail(user.email)) {
-    return user;
-  }
+  if (isAllowlistedAdminEmail(user.email)) return user;
 
-  const hasSpecificRole = await userHasAdminRoleRecord(user.id, allowedRoles);
-  if (!hasSpecificRole && !userHasPlatformRole(user, allowedRoles)) {
+  // Single DB query: fetch role once, check against both global admin and
+  // allowed roles — avoids 2 sequential round-trips to Supabase.
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("admin_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .maybeSingle();
+
+  const role = data?.role ?? "";
+  const isGlobalAdmin = ["owner", "admin"].includes(role);
+  const hasSpecificRole = allowedRoles.includes(role);
+
+  if (!isGlobalAdmin && !hasSpecificRole && !userHasPlatformRole(user, allowedRoles)) {
     redirect("/");
   }
 
