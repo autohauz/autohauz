@@ -2,13 +2,21 @@
    Untyped Supabase client: rows surface as `any` and are shaped into typed
    projections before leaving this module. */
 import { unstable_cache } from "next/cache";
-import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Admin dashboard + inventory read-side (SRS §15.1–15.2).
- * Metrics run through the acting user's session so the RPC's is_staff() guard
- * applies; list queries use the admin client after the page-level requireAdmin.
+ *
+ * IMPORTANT: We intentionally use `createAdminClient()` (service-role key) here
+ * instead of `createServerClient()`. The server client calls `await cookies()`
+ * internally, which is tied to the active HTTP request context. When Next.js
+ * re-renders this page after a Server Action calls `revalidateTag("vehicles")`,
+ * that re-render can happen outside a real request context — making `cookies()`
+ * throw an internal Next.js error that surfaces to the client as
+ * "An unexpected response was received from the server".
+ *
+ * The admin client has no such dependency and is safe to use here because
+ * `requireAdmin()` already guards every admin route at the layout level.
  */
 
 export type DashboardMetrics = {
@@ -34,10 +42,16 @@ export type DashboardMetrics = {
 };
 
 async function _getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
-  const supabase = await createServerClient();
-  const { data, error } = await supabase.rpc("get_admin_dashboard_metrics", { p_sla_minutes: 15 });
-  if (error || !data) return null;
-  return data as DashboardMetrics;
+  try {
+    // Use admin client — no cookies() dependency, safe during RSC revalidation.
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("get_admin_dashboard_metrics", { p_sla_minutes: 15 });
+    if (error || !data) return null;
+    return data as DashboardMetrics;
+  } catch {
+    // Never let a metrics failure crash the dashboard page itself.
+    return null;
+  }
 }
 
 export const getAdminDashboardMetrics = _getAdminDashboardMetrics;

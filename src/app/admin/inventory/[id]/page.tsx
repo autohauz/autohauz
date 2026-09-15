@@ -9,7 +9,6 @@ import { evaluateReadiness, type ReadinessResult } from "@/lib/syndication/readi
 import { getMakes, getAllModels, getAllFeatures } from "@/lib/data/inventory";
 import { getActiveLocations } from "@/lib/data/locations";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient as createPublicClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Edit Vehicle" };
 export const dynamic = "force-dynamic";
@@ -65,14 +64,20 @@ export default async function EditVehiclePage({
   // PostgREST can return a to-one embed (`media:media_id(...)`) as either a
   // single object OR a one-element array depending on client/version — normalise
   // both so images don't silently vanish when the shape differs (e.g. in prod).
-  const publicClient = await createPublicClient();
+  //
+  // NOTE: We use createAdminClient() — NOT createServerClient() — because
+  // getPublicUrl() is a pure URL-construction helper: no auth, no network call,
+  // no cookies. createServerClient() calls `await cookies()` internally, which
+  // is tied to the active HTTP request context and THROWS when Next.js
+  // re-renders this page after a Server Action calls revalidateTag("vehicles").
+  const storageClient = createAdminClient();
   const images = (imageRows ?? [])
     .map((row) => {
       const rel = row.media as { storage_key?: string } | { storage_key?: string }[] | null;
       const media = Array.isArray(rel) ? rel[0] : rel;
       const storageKey = media?.storage_key ?? "";
       if (!storageKey) return null;
-      const { data: urlData } = publicClient.storage.from("media").getPublicUrl(storageKey);
+      const { data: urlData } = storageClient.storage.from("media").getPublicUrl(storageKey);
       return {
         media: { storage_key: storageKey, url: urlData.publicUrl },
         is_cover: row.is_cover,

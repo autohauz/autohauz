@@ -66,7 +66,12 @@ export function VehicleForm({
       deleteTimeoutRef.current = setTimeout(() => setConfirmingDelete(false), 3000);
     } else {
       const { deleteVehicle } = await import("@/app/admin/inventory/actions");
-      const res = await deleteVehicle(v.id);
+      // Pass shouldRedirect=false: calling redirect() inside a Server Action
+      // that is invoked directly from a client component (not via a form action)
+      // throws a Next.js internal error that propagates back to the client as an
+      // unhandled rejection, crashing the component and triggering the error
+      // boundary. Let the client handle navigation instead.
+      const res = await deleteVehicle(v.id, false);
       if (res?.error) {
         toast.error("Failed to delete vehicle: " + res.error);
       } else {
