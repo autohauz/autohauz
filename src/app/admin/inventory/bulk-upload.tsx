@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertCircle, Download } from "lucide-react";
-import { processBulkUpload } from "./bulk-actions";
+import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertCircle } from "lucide-react";
 
+// Uses the dedicated API route instead of a Server Action so that Vercel's
+// 4.5 MB Server Action body limit does not block large spreadsheets.
+const BULK_UPLOAD_API = "/api/admin/bulk-upload";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
 const MAX_UPLOAD_SIZE_MB = MAX_UPLOAD_SIZE_BYTES / 1024 / 1024;
 const ACCEPTED_UPLOAD_TYPES = ".csv,.xlsx,.xls";
@@ -49,19 +51,27 @@ export function BulkUpload() {
     formData.append("file", file);
 
     try {
-      const response = await processBulkUpload(formData);
-      if (response.success) {
-        setResult({ success: response.count });
+      const res = await fetch(BULK_UPLOAD_API, {
+        method: "POST",
+        body: formData,
+        // Do NOT set Content-Type — browser sets it automatically with the
+        // correct multipart boundary when body is FormData.
+      });
+
+      const json = await res.json();
+
+      if (json.success) {
+        setResult({ success: json.count });
         setFile(null);
+      } else if (json.errors) {
+        setResult({ errors: json.errors });
       } else {
-        setResult({ errors: response.errors || [response.error || "Upload failed"] });
+        setResult({ errors: [json.error || "Upload failed. Please try again."] });
       }
     } catch (error) {
       console.error("Bulk upload request failed:", error);
       setResult({
-        errors: [
-          `The upload request failed before the import could run. Please try a CSV or Excel file smaller than ${MAX_UPLOAD_SIZE_MB} MB.`,
-        ],
+        errors: ["Could not reach the server. Please check your connection and try again."],
       });
     } finally {
       setIsUploading(false);
