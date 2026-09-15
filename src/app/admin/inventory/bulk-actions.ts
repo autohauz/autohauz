@@ -16,7 +16,7 @@ function uniqueSlug(base: string) {
   return `${slugify(base)}-${Math.random().toString(36).substring(2, 6)}`;
 }
 
-const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_BYTES = 4 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = new Set(["csv", "xlsx", "xls"]);
 
 export async function processBulkUpload(formData: FormData) {
@@ -36,7 +36,7 @@ export async function processBulkUpload(formData: FormData) {
     }
 
     if (file.size > MAX_UPLOAD_SIZE_BYTES) {
-      return { success: false, error: "The uploaded file is too large. Please upload a file smaller than 8 MB." };
+      return { success: false, error: "The uploaded file is too large. Please upload a file smaller than 4 MB." };
     }
 
     const supabase = createAdminClient();
