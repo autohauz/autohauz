@@ -16,7 +16,13 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
 
-  if (error) {
+  if (error || !data.user) {
+    // Fallback to reading the cryptographically signed JWT if the API check fails
+    // due to network timeouts on Vercel Node/Edge runtime.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.user) {
+      return sessionData.session.user;
+    }
     return null;
   }
 
