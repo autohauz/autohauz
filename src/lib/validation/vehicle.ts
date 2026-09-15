@@ -111,7 +111,7 @@ export const vehicleCsvRowSchema = z.object({
   interior: z.string().trim().optional(),
   vin: z.string().trim().optional(),
   registration: z.string().trim().optional(),
-  rego_expiry: z.string().date().optional().or(z.literal("")),
+  rego_expiry: z.string().trim().optional().or(z.literal("")),
   safety_rating: z.string().trim().optional(),
   warranty_text: z.string().trim().optional(),
 });

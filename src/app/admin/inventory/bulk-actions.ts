@@ -79,7 +79,10 @@ export async function processBulkUpload(formData: FormData) {
       "all wheel drive": "awd",
       "four_wd": "four_wd",
       "4wd": "four_wd",
-      "4x4": "four_wd"
+      "4x4": "four_wd",
+      "4x2": "rwd", // common proxy for RWD ute
+      "front": "fwd",
+      "rear": "rwd"
     };
 
     const bodyTypeMap: Record<string, string> = {
@@ -101,6 +104,7 @@ export async function processBulkUpload(formData: FormData) {
     const fuelTypeMap: Record<string, string> = {
       "petrol": "petrol",
       "unleaded": "petrol",
+      "premium": "petrol",
       "diesel": "diesel",
       "hybrid": "hybrid",
       "phev": "phev",
@@ -110,12 +114,35 @@ export async function processBulkUpload(formData: FormData) {
       "lpg": "lpg"
     };
 
+    // Helper to format generic date strings (DD/MM/YYYY or DD-MM-YYYY) to YYYY-MM-DD
+    function parseDateToIso(dateStr: string | undefined): string | undefined {
+      if (!dateStr) return undefined;
+      const str = String(dateStr).trim();
+      if (!str) return undefined;
+      
+      // If it already looks like YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+      // Check for DD/MM/YYYY or DD-MM-YYYY
+      const parts = str.split(/[\/\-]/);
+      if (parts.length === 3) {
+        const [p1, p2, p3] = parts;
+        // If year is last (DD/MM/YYYY)
+        if (p3.length === 4) {
+          const day = p1.padStart(2, '0');
+          const month = p2.padStart(2, '0');
+          return `${p3}-${month}-${day}`;
+        }
+      }
+      return str; // Fallback, let Zod or DB handle/reject it
+    }
+
     // 1. Parse and validate rows
     rows.forEach((row, index) => {
       const fuelRaw = String(row["Fuel Type"] || row["fuel_type"] || "").toLowerCase().trim();
       const transRaw = String(row["Transmission"] || row["transmission"] || "").toLowerCase().trim();
       const bodyRaw = String(row["Body Type"] || row["body_type"] || "").toLowerCase().trim();
-      const driveRaw = row["Drive Type"] || row["drive_type"] ? String(row["Drive Type"] || row["drive_type"]).toLowerCase().trim() : undefined;
+      const driveRaw = row["Drive Type"] || row["drive_type"] ? String(row["Drive Type"] || row["drive_type"]).toLowerCase().trim().replace(/\s+/g, " ") : undefined;
 
       // Map columns based on our template
       const mapped = {
@@ -138,7 +165,7 @@ export async function processBulkUpload(formData: FormData) {
         interior: row["Interior"] || row["interior"] ? String(row["Interior"] || row["interior"]) : undefined,
         vin: row["VIN"] || row["vin"] ? String(row["VIN"] || row["vin"]) : undefined,
         registration: row["Registration"] || row["registration"] ? String(row["Registration"] || row["registration"]) : undefined,
-        rego_expiry: row["Rego Expiry"] || row["rego_expiry"] ? String(row["Rego Expiry"] || row["rego_expiry"]) : undefined,
+        rego_expiry: parseDateToIso(row["Rego Expiry"] || row["rego_expiry"]),
         safety_rating: row["Safety Rating"] || row["safety_rating"] ? String(row["Safety Rating"] || row["safety_rating"]) : undefined,
         warranty_text: row["Warranty"] || row["warranty_text"] ? String(row["Warranty"] || row["warranty_text"]) : undefined,
         description: row["Description"] ? String(row["Description"]) : undefined,
