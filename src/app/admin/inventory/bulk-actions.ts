@@ -138,37 +138,44 @@ export async function processBulkUpload(formData: FormData) {
     }
 
     // 1. Parse and validate rows
-    rows.forEach((row, index) => {
-      const fuelRaw = String(row["Fuel Type"] || row["fuel_type"] || "").toLowerCase().trim();
-      const transRaw = String(row["Transmission"] || row["transmission"] || "").toLowerCase().trim();
-      const bodyRaw = String(row["Body Type"] || row["body_type"] || "").toLowerCase().trim();
-      const driveRaw = row["Drive Type"] || row["drive_type"] ? String(row["Drive Type"] || row["drive_type"]).toLowerCase().trim().replace(/\s+/g, " ") : undefined;
+    rows.forEach((rawRow, index) => {
+      // Normalize keys to lowercase and remove spaces/underscores for robust matching
+      const row: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawRow)) {
+        const normalizedKey = k.toLowerCase().replace(/[\s_]+/g, "");
+        row[normalizedKey] = v;
+      }
 
-      // Map columns based on our template
+      const fuelRaw = String(row["fueltype"] || "").toLowerCase().trim();
+      const transRaw = String(row["transmission"] || "").toLowerCase().trim();
+      const bodyRaw = String(row["bodytype"] || "").toLowerCase().trim();
+      const driveRaw = row["drivetype"] ? String(row["drivetype"]).toLowerCase().trim().replace(/\s+/g, " ") : undefined;
+
+      // Map columns based on our template (using normalized keys)
       const mapped = {
-        stock_id: String(row["Stock ID"] || row["stock_id"] || ""),
-        make: String(row["Make"] || row["make"] || ""),
-        model: String(row["Model"] || row["model"] || ""),
-        variant: row["Variant"] ? String(row["Variant"]) : undefined,
-        year: parseInt(row["Year"] || row["year"] || "0"),
-        mileage_km: parseInt(row["Mileage (km)"] || row["mileage_km"] || "0"),
+        stock_id: String(row["stockid"] || ""),
+        make: String(row["make"] || ""),
+        model: String(row["model"] || ""),
+        variant: row["variant"] ? String(row["variant"]) : undefined,
+        year: parseInt(String(row["year"] || "0")),
+        mileage_km: parseInt(String(row["mileagekm"] || row["mileage"] || row["odometer"] || "0")),
         fuel_type: fuelTypeMap[fuelRaw] || fuelRaw,
         transmission: transmissionMap[transRaw] || transRaw,
         body_type: bodyTypeMap[bodyRaw] || bodyRaw,
         drive_type: driveRaw ? (driveTypeMap[driveRaw] || driveRaw) : undefined,
-        price: parseFloat(row["Price"] || row["price"] || "0"),
-        exterior_color: row["Exterior Color"] ? String(row["Exterior Color"]) : undefined,
-        engine: row["Engine"] || row["engine"] ? String(row["Engine"] || row["engine"]) : undefined,
-        power_kw: row["Power (kW)"] || row["power_kw"] ? parseInt(row["Power (kW)"] || row["power_kw"]) : undefined,
-        seats: row["Seats"] || row["seats"] ? parseInt(row["Seats"] || row["seats"]) : undefined,
-        doors: row["Doors"] || row["doors"] ? parseInt(row["Doors"] || row["doors"]) : undefined,
-        interior: row["Interior"] || row["interior"] ? String(row["Interior"] || row["interior"]) : undefined,
-        vin: row["VIN"] || row["vin"] ? String(row["VIN"] || row["vin"]) : undefined,
-        registration: row["Registration"] || row["registration"] ? String(row["Registration"] || row["registration"]) : undefined,
-        rego_expiry: parseDateToIso(row["Rego Expiry"] || row["rego_expiry"]),
-        safety_rating: row["Safety Rating"] || row["safety_rating"] ? String(row["Safety Rating"] || row["safety_rating"]) : undefined,
-        warranty_text: row["Warranty"] || row["warranty_text"] ? String(row["Warranty"] || row["warranty_text"]) : undefined,
-        description: row["Description"] ? String(row["Description"]) : undefined,
+        price: parseFloat(String(row["price"] || "0")),
+        exterior_color: row["exteriorcolor"] || row["color"] ? String(row["exteriorcolor"] || row["color"]) : undefined,
+        engine: row["engine"] ? String(row["engine"]) : undefined,
+        power_kw: row["powerkw"] || row["power"] ? parseInt(String(row["powerkw"] || row["power"])) : undefined,
+        seats: row["seats"] ? parseInt(String(row["seats"])) : undefined,
+        doors: row["doors"] ? parseInt(String(row["doors"])) : undefined,
+        interior: row["interior"] ? String(row["interior"]) : undefined,
+        vin: row["vin"] ? String(row["vin"]) : undefined,
+        registration: row["registration"] || row["rego"] ? String(row["registration"] || row["rego"]) : undefined,
+        rego_expiry: parseDateToIso(row["regoexpiry"]),
+        safety_rating: row["safetyrating"] ? String(row["safetyrating"]) : undefined,
+        warranty_text: row["warranty"] || row["warrantytext"] ? String(row["warranty"] || row["warrantytext"]) : undefined,
+        description: row["description"] ? String(row["description"]) : undefined,
       };
 
       const parsed = vehicleCsvRowSchema.safeParse(mapped);
