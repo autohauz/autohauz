@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "The uploaded file is empty." }, { status: 400 });
     }
 
-    const errors: string[] = [];
+    const skippedRows: string[] = [];
     const parsedRows: any[] = [];
 
     rows.forEach((rawRow, index) => {
@@ -183,11 +183,14 @@ export async function POST(request: NextRequest) {
         model: String(row["model"] || ""),
         variant: row["variant"] ? String(row["variant"]) : undefined,
         year: parseInt(String(row["year"] || "0")),
-        mileage_km: parseInt(String(row["mileagekm"] || row["mileage"] || row["odometer"] || "0")),
-        fuel_type: fuelTypeMap[fuelRaw] || fuelRaw,
-        transmission: transmissionMap[transRaw] || transRaw,
-        body_type: bodyTypeMap[bodyRaw] || bodyRaw,
-        drive_type: driveRaw ? driveTypeMap[driveRaw] || driveRaw : undefined,
+        mileage_km: row["mileagekm"] || row["mileage"] || row["odometer"]
+          ? parseInt(String(row["mileagekm"] || row["mileage"] || row["odometer"]))
+          : 0,
+        // Pass through mapped or raw values; lenientEnum in the schema clears unknown values
+        fuel_type: fuelTypeMap[fuelRaw] ?? (fuelRaw || undefined),
+        transmission: transmissionMap[transRaw] ?? (transRaw || undefined),
+        body_type: bodyTypeMap[bodyRaw] ?? (bodyRaw || undefined),
+        drive_type: driveRaw ? driveTypeMap[driveRaw] ?? driveRaw : undefined,
         price: parseFloat(String(row["price"] || "0")),
         exterior_color: row["exteriorcolor"] || row["color"]
           ? String(row["exteriorcolor"] || row["color"])
@@ -216,16 +219,18 @@ export async function POST(request: NextRequest) {
 
       const parsed = vehicleCsvRowSchema.safeParse(mapped);
       if (!parsed.success) {
-        errors.push(
+        // Only truly unrecoverable issues reach here (missing stock_id/make/model, invalid price)
+        skippedRows.push(
           `Row ${index + 2}: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
         );
-        return;
+        return; // skip this row, keep going
       }
       parsedRows.push(parsed.data);
     });
 
-    if (errors.length > 0) {
-      return NextResponse.json({ success: false, errors }, { status: 422 });
+    // If every single row was skipped, surface why
+    if (parsedRows.length === 0) {
+      return NextResponse.json({ success: false, errors: skippedRows }, { status: 422 });
     }
 
     // Resolve Makes and Models
@@ -332,7 +337,7 @@ export async function POST(request: NextRequest) {
       })
       .then(() => {});
 
-    return NextResponse.json({ success: true, count: inserts.length });
+    return NextResponse.json({ success: true, count: inserts.length, skipped: skippedRows.length });
   } catch (err) {
     console.error("Bulk upload API error:", err);
     return NextResponse.json(

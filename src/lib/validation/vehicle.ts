@@ -36,6 +36,20 @@ const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
     z.enum(values).optional(),
   );
 
+/**
+ * Lenient enum for CSV imports: unknown/misspelled values become undefined
+ * (row still imports, field is just blank) instead of throwing a hard error.
+ */
+const lenientEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (v) => {
+      if (v === "" || v === null || v === undefined) return undefined;
+      const s = String(v).toLowerCase().trim();
+      return (values as readonly string[]).includes(s) ? s : undefined;
+    },
+    z.enum(values).optional(),
+  );
+
 export const vehicleCreateSchema = z.object({
   stockId: z.string().trim().min(1).max(40),
   makeId: z.string().uuid(),
@@ -89,6 +103,10 @@ export const vehicleUpdateSchema = vehicleCreateSchema.partial().extend({
 /**
  * One CSV import row — everything arrives as strings; makes/models
  * are matched by slug/name server-side.
+ *
+ * Enum fields (fuel_type, transmission, body_type, drive_type) are
+ * LENIENT: unknown or misspelled values are silently set to null so
+ * the row still imports instead of being rejected entirely.
  */
 export const vehicleCsvRowSchema = z.object({
   stock_id: z.string().trim().min(1),
@@ -96,11 +114,18 @@ export const vehicleCsvRowSchema = z.object({
   model: z.string().trim().min(1),
   variant: z.string().trim().optional(),
   year: z.coerce.number().int().min(1900).max(currentYear + 2),
-  mileage_km: z.coerce.number().int().min(0),
-  fuel_type: z.enum(fuelTypes),
-  transmission: z.enum(transmissionTypes),
-  body_type: z.enum(bodyTypes),
-  drive_type: optionalEnum(driveTypes),
+  mileage_km: z.preprocess(
+    (v) => {
+      if (v === "" || v === null || v === undefined) return 0;
+      const n = Number(v);
+      return isNaN(n) ? 0 : Math.max(0, n);
+    },
+    z.number().int().min(0).default(0),
+  ),
+  fuel_type: lenientEnum(fuelTypes),
+  transmission: lenientEnum(transmissionTypes),
+  body_type: lenientEnum(bodyTypes),
+  drive_type: lenientEnum(driveTypes),
   price: z.coerce.number().positive(),
   exterior_color: z.string().trim().optional(),
   description: z.string().trim().optional(),

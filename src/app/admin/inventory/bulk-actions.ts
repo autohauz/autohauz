@@ -59,7 +59,6 @@ export async function processBulkUpload(formData: FormData) {
       return { success: false, error: "The uploaded file is empty." };
     }
 
-    const errors: string[] = [];
     const parsedRows: any[] = [];
 
     const transmissionMap: Record<string, string> = {
@@ -80,7 +79,7 @@ export async function processBulkUpload(formData: FormData) {
       "four_wd": "four_wd",
       "4wd": "four_wd",
       "4x4": "four_wd",
-      "4x2": "rwd", // common proxy for RWD ute
+      "4x2": "rwd",
       "front": "fwd",
       "rear": "rwd"
     };
@@ -119,27 +118,24 @@ export async function processBulkUpload(formData: FormData) {
       if (!dateStr) return undefined;
       const str = String(dateStr).trim();
       if (!str) return undefined;
-      
-      // If it already looks like YYYY-MM-DD
       if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-
-      // Check for DD/MM/YYYY or DD-MM-YYYY
       const parts = str.split(/[\/\-]/);
       if (parts.length === 3) {
         const [p1, p2, p3] = parts;
-        // If year is last (DD/MM/YYYY)
         if (p3.length === 4) {
-          const day = p1.padStart(2, '0');
-          const month = p2.padStart(2, '0');
-          return `${p3}-${month}-${day}`;
+          return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
         }
       }
-      return str; // Fallback, let Zod or DB handle/reject it
+      return str;
     }
 
-    // 1. Parse and validate rows
+    // 1. Parse and validate rows.
+    //    lenientEnum in vehicleCsvRowSchema silently clears unknown enum values,
+    //    so rows almost never fail here. Only rows with missing Stock ID / Make /
+    //    Model or an invalid price are skipped; everything else is imported.
+    const skippedRows: string[] = [];
+
     rows.forEach((rawRow, index) => {
-      // Normalize keys to lowercase and remove spaces/underscores for robust matching
       const row: Record<string, any> = {};
       for (const [k, v] of Object.entries(rawRow)) {
         const normalizedKey = k.toLowerCase().replace(/[\s_]+/g, "");
@@ -151,18 +147,19 @@ export async function processBulkUpload(formData: FormData) {
       const bodyRaw = String(row["bodytype"] || "").toLowerCase().trim();
       const driveRaw = row["drivetype"] ? String(row["drivetype"]).toLowerCase().trim().replace(/\s+/g, " ") : undefined;
 
-      // Map columns based on our template (using normalized keys)
       const mapped = {
         stock_id: String(row["stockid"] || ""),
         make: String(row["make"] || ""),
         model: String(row["model"] || ""),
         variant: row["variant"] ? String(row["variant"]) : undefined,
         year: parseInt(String(row["year"] || "0")),
-        mileage_km: parseInt(String(row["mileagekm"] || row["mileage"] || row["odometer"] || "0")),
-        fuel_type: fuelTypeMap[fuelRaw] || fuelRaw,
-        transmission: transmissionMap[transRaw] || transRaw,
-        body_type: bodyTypeMap[bodyRaw] || bodyRaw,
-        drive_type: driveRaw ? (driveTypeMap[driveRaw] || driveRaw) : undefined,
+        mileage_km: row["mileagekm"] || row["mileage"] || row["odometer"]
+          ? parseInt(String(row["mileagekm"] || row["mileage"] || row["odometer"]))
+          : 0,
+        fuel_type: fuelTypeMap[fuelRaw] ?? (fuelRaw || undefined),
+        transmission: transmissionMap[transRaw] ?? (transRaw || undefined),
+        body_type: bodyTypeMap[bodyRaw] ?? (bodyRaw || undefined),
+        drive_type: driveRaw ? (driveTypeMap[driveRaw] ?? driveRaw) : undefined,
         price: parseFloat(String(row["price"] || "0")),
         exterior_color: row["exteriorcolor"] || row["color"] ? String(row["exteriorcolor"] || row["color"]) : undefined,
         engine: row["engine"] ? String(row["engine"]) : undefined,
@@ -181,15 +178,15 @@ export async function processBulkUpload(formData: FormData) {
       const parsed = vehicleCsvRowSchema.safeParse(mapped);
 
       if (!parsed.success) {
-        errors.push(`Row ${index + 2}: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+        skippedRows.push(`Row ${index + 2}: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
         return;
       }
 
       parsedRows.push(parsed.data);
     });
 
-    if (errors.length > 0) {
-      return { success: false, errors };
+    if (parsedRows.length === 0) {
+      return { success: false, errors: skippedRows };
     }
 
     // 2. Resolve Makes and Models
@@ -303,6 +300,7 @@ export async function processBulkUpload(formData: FormData) {
     return { 
       success: true, 
       count: inserts.length,
+      skipped: skippedRows.length,
     };
 
   } catch (error) {

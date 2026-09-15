@@ -61,7 +61,7 @@ export function BulkUpload() {
       const json = await res.json();
 
       if (json.success) {
-        setResult({ success: json.count });
+        setResult({ success: json.count, skipped: json.skipped ?? 0 });
         setFile(null);
       } else if (json.errors) {
         setResult({ errors: json.errors });
@@ -134,8 +134,15 @@ export function BulkUpload() {
 
             {result?.success !== undefined && (
               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex gap-3 text-emerald-700">
-                <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <p className="text-sm font-medium">Successfully imported {result.success} vehicles!</p>
+                <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Successfully imported {result.success} vehicle{result.success !== 1 ? "s" : ""}!</p>
+                  {result.skipped != null && result.skipped > 0 && (
+                    <p className="mt-1 text-emerald-600/80">
+                      {result.skipped} row{result.skipped !== 1 ? "s were" : " was"} skipped (missing required fields like Stock ID, Make, Model, or Price).
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
