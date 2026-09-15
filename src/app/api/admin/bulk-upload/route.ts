@@ -72,19 +72,36 @@ const fuelTypeMap: Record<string, string> = {
   lpg: "lpg",
 };
 
+/**
+ * Try to parse a date string to YYYY-MM-DD.
+ * Returns undefined for anything that isn't a recognisable date so that
+ * values like "3 Months Rego" are silently dropped instead of crashing
+ * the database insert.
+ */
 function parseDateToIso(dateStr: string | undefined): string | undefined {
   if (!dateStr) return undefined;
   const str = String(dateStr).trim();
   if (!str) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? undefined : str;
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY
   const parts = str.split(/[\/\-]/);
   if (parts.length === 3) {
     const [p1, p2, p3] = parts;
-    if (p3.length === 4) {
-      return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
+    if (p3.length === 4 && /^\d+$/.test(p1) && /^\d+$/.test(p2) && /^\d+$/.test(p3)) {
+      const iso = `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? undefined : iso;
     }
   }
-  return str;
+
+  // Not a recognisable date — drop it silently
+  return undefined;
 }
 
 export async function POST(request: NextRequest) {
