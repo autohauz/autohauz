@@ -111,7 +111,7 @@ export function BulkUpload() {
         <div className="flex-1">
           <h2 className="text-lg font-bold text-foreground">Bulk Upload Vehicles</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload your inventory spreadsheet. We support CSV and Excel formats. Ensure your columns match: Stock ID, Make, Model, Year, Price, etc.{" "}
+            Upload your inventory spreadsheet. We support CSV and Excel formats. Ensure your columns match: Make, Model, Year, Price, etc.{" "}
             <a href="/templates/vehicle-upload-template.csv" download className="text-emerald-600 font-semibold hover:underline">
               Download the template here.
             </a>
@@ -142,7 +142,7 @@ export function BulkUpload() {
                   <p className="font-medium">Successfully imported {result.success} vehicle{result.success !== 1 ? "s" : ""}!</p>
                   {result.skipped != null && result.skipped > 0 && (
                     <p className="mt-1 text-emerald-600/80">
-                      {result.skipped} row{result.skipped !== 1 ? "s were" : " was"} skipped (missing required fields like Stock ID, Make, Model, or Price).
+                      {result.skipped} row{result.skipped !== 1 ? "s were" : " was"} skipped (missing required fields like Make, Model, or Price).
                     </p>
                   )}
                 </div>
