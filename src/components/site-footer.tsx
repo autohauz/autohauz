@@ -304,6 +304,17 @@ export async function SiteFooter() {
                 {l.label}
               </Link>
             ))}
+            <span>
+              Website by{" "}
+              <a
+                href="https://www.tradiedigitalagency.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-slate-300"
+              >
+                Tradie Digital Agency
+              </a>
+            </span>
           </div>
 
         </div>
