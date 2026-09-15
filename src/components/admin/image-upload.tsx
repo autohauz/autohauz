@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UploadCloud, X, Loader2, Image as ImageIcon, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -95,6 +95,12 @@ type UploadStats = { originalKb: number; compressedKb: number };
 
 export function ImageUpload({ initialImages = [] }: { initialImages?: UploadedImage[] }) {
   const [images, setImages] = useState<UploadedImage[]>(initialImages);
+  
+  // Sync if initialImages changes from parent (e.g. Next.js router cache reusing components)
+  const initialImagesStr = JSON.stringify(initialImages);
+  useEffect(() => {
+    setImages(initialImages);
+  }, [initialImagesStr]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UploadStats | null>(null);
