@@ -109,7 +109,7 @@ export const vehicleUpdateSchema = vehicleCreateSchema.partial().extend({
  * the row still imports instead of being rejected entirely.
  */
 export const vehicleCsvRowSchema = z.object({
-  stock_id: z.string().trim().min(1),
+  stock_id: z.string().trim().optional().or(z.literal("")),
   make: z.string().trim().min(1),
   model: z.string().trim().min(1),
   variant: z.string().trim().optional(),
