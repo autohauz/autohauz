@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
     const CHUNK_SIZE = 200;
     for (let i = 0; i < inserts.length; i += CHUNK_SIZE) {
       const chunk = inserts.slice(i, i + CHUNK_SIZE);
-      const { error } = await supabaseAdmin.from("vehicles").insert(chunk);
+      const { error } = await supabaseAdmin.from("vehicles").upsert(chunk, { onConflict: "stock_id" });
       if (error) {
         return NextResponse.json(
           { success: false, error: `Database error (batch ${Math.floor(i / CHUNK_SIZE) + 1}): ${error.message}` },
