@@ -9,10 +9,9 @@ const nextConfig: NextConfig = {
   // Remove "X-Powered-By: Next.js" from every response — reduces attack surface
   // by not advertising the framework to automated scanners.
   poweredByHeader: false,
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "10mb",
-    },
+  // Next.js 15+ has moved serverActions out of experimental
+  serverActions: {
+    bodySizeLimit: "4mb", // Vercel hobby limits to 4.5MB anyway
   },
   turbopack: {
     root: process.cwd(),
