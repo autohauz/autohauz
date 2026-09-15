@@ -22,7 +22,7 @@ const NAV = [
   { href: "/admin/audit", label: "Audit Log", icon: ScrollText },
 ];
 
-export function AdminNav({ userEmail, role }: { userEmail?: string; role?: string }) {
+export function AdminNav({ userEmail, userName, role }: { userEmail?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -73,6 +73,7 @@ export function AdminNav({ userEmail, role }: { userEmail?: string; role?: strin
         </div>
         {links}
         <div className="mt-auto border-t border-white/10 p-4 text-xs text-slate-400">
+          {userName && <p className="truncate font-semibold text-white">{userName}</p>}
           <p className="truncate text-slate-300">{userEmail}</p>
           {role ? <p className="capitalize">{role.replace("_", " ")}</p> : null}
           <form action="/auth/sign-out" method="POST">

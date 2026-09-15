@@ -9,6 +9,7 @@ type SupabaseUser = {
   id: string;
   email?: string;
   app_metadata?: Record<string, unknown>;
+  user_metadata?: Record<string, unknown>;
   factors?: unknown[];
 };
 
@@ -62,7 +63,7 @@ async function userHasAdminRoleRecord(
     query = query.in("role", roles);
   }
 
-  const { data } = await query.maybeSingle();
+  const { data } = await query.limit(1).maybeSingle();
 
   return !!data;
 }
@@ -81,13 +82,13 @@ export const getUserAdminRole = cache(async function getUserAdminRole(user: Supa
     .select("role")
     .eq("user_id", user.id)
     .eq("active", true)
+    .limit(1)
     .maybeSingle();
 
   if (data?.role) return data.role;
   
-  if (user.app_metadata?.platform_role === "owner" || user.app_metadata?.platform_role === "admin") {
-    return "super_admin";
-  }
+  if (user.app_metadata?.platform_role === "owner") return "owner";
+  if (user.app_metadata?.platform_role === "admin") return "admin";
 
   return "viewer";
 });
@@ -115,6 +116,7 @@ export async function requireAdminRole(allowedRoles: string[]) {
     .select("role")
     .eq("user_id", user.id)
     .eq("active", true)
+    .limit(1)
     .maybeSingle();
 
   const role = data?.role ?? "";
