@@ -3,6 +3,7 @@
 import { ErrorState } from "@/components/error-state";
 
 export default function AdminDashboardError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
