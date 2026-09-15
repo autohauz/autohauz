@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { revalidateTag } from "next/cache";
+import { revalidateTag as _revalidateTag } from "next/cache";
+const revalidateTag = _revalidateTag as (tag: string) => void;
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as xlsx from "xlsx";
 import { vehicleCsvRowSchema } from "@/lib/validation/vehicle";
@@ -356,6 +357,7 @@ export async function POST(request: NextRequest) {
       .then(() => {});
 
     revalidateTag("vehicles");
+    revalidateTag("public");
     
     return NextResponse.json({ success: true, count: inserts.length, skipped: skippedRows.length });
   } catch (err) {
