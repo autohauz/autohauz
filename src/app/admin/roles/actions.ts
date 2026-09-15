@@ -135,20 +135,9 @@ export async function assignAdminRole(
   // Look up the user
   let user = await searchUserByEmail(email);
   if (!user) {
-    // User doesn't exist, invite them
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email);
-    if (inviteError) {
-      return { status: "error", message: `Failed to invite user: ${inviteError.message}` };
-    }
-    
-    // Ensure profile exists for the newly invited user
-    const { deriveProfileFromUser } = await import("@/lib/auth/profile");
-    await supabase.from("profiles").upsert(deriveProfileFromUser(inviteData.user), { onConflict: "id" });
-    
-    user = {
-      id: inviteData.user.id,
-      email: inviteData.user.email!,
-      fullName: null,
+    return {
+      status: "error",
+      message: `No account found for "${email}". The person must sign up at cars-365.com.au first before you can grant them admin access.`,
     };
   }
 
