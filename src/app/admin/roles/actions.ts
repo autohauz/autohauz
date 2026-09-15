@@ -31,15 +31,29 @@ export async function getAdminRoles(): Promise<AdminRoleEntry[]> {
   await requireAdminRole(["owner", "admin", "super_admin"]);
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  // Fetch roles without relying on the PostgREST relationship cache
+  const { data: rolesData, error: rolesError } = await supabase
     .from("admin_roles")
-    .select("user_id, role, active, mfa_required, created_at, profiles(full_name, email)")
+    .select("user_id, role, active, mfa_required, created_at")
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(`Failed to fetch admin roles: ${error.message}`);
+  if (rolesError) throw new Error(`Failed to fetch admin roles: ${rolesError.message}`);
 
-  return (data ?? []).map((row) => {
-    const profile = row.profiles as unknown as { email: string | null; full_name: string | null } | null;
+  const userIds = (rolesData ?? []).map((r) => r.user_id);
+
+  // Fetch corresponding profiles
+  let profilesMap = new Map();
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+
+    profilesMap = new Map((profilesData || []).map((p) => [p.id, p]));
+  }
+
+  return (rolesData ?? []).map((row) => {
+    const profile = profilesMap.get(row.user_id);
     return {
       userId: row.user_id,
       email: profile?.email ?? "—",

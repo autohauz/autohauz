@@ -11,7 +11,7 @@ export default function AdminDashboardError({
   return (
     <ErrorState
       title="Failed to load admin dashboard"
-      message="We couldn't load the admin dashboard data. Please try again."
+      message={error.message || "We couldn't load the admin dashboard data. Please try again."}
       onRetry={reset}
     />
   );
