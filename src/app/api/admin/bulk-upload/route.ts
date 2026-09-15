@@ -308,9 +308,9 @@ export async function POST(request: NextRequest) {
         variant: r.variant || null,
         year: r.year,
         mileage_km: r.mileage_km,
-        fuel_type: r.fuel_type,
-        transmission: r.transmission,
-        body_type: r.body_type,
+        fuel_type: r.fuel_type ?? "petrol",        // NOT NULL — default to most common
+        transmission: r.transmission ?? "automatic", // NOT NULL — default to most common
+        body_type: r.body_type ?? "sedan",           // NOT NULL — default to most common
         drive_type: r.drive_type || null,
         price: r.price,
         exterior_color: r.exterior_color || null,
