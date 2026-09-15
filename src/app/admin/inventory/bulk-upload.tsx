@@ -66,6 +66,11 @@ export function BulkUpload() {
         setResult({ success: json.count, skipped: json.skipped ?? 0 });
         setFile(null);
         router.refresh();
+        // Force a hard reload after a short delay so the user sees the success message,
+        // guaranteeing the inventory list is updated and bypassing any router cache staleness.
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else if (json.errors) {
         setResult({ errors: json.errors });
       } else {

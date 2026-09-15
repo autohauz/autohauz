@@ -34,10 +34,16 @@ export type DashboardMetrics = {
 };
 
 async function _getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
-  const supabase = await createServerClient();
-  const { data, error } = await supabase.rpc("get_admin_dashboard_metrics", { p_sla_minutes: 15 });
-  if (error || !data) return null;
-  return data as DashboardMetrics;
+  try {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase.rpc("get_admin_dashboard_metrics", { p_sla_minutes: 15 });
+    if (error || !data) return null;
+    return data as DashboardMetrics;
+  } catch (err) {
+    // cookies() throws when called during RSC background revalidation.
+    // Swallow the error so it doesn't crash the triggering Server Action.
+    return null;
+  }
 }
 
 export const getAdminDashboardMetrics = _getAdminDashboardMetrics;
