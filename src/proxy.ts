@@ -304,7 +304,9 @@ export async function proxy(request: NextRequest) {
       ) {
         isAuthorizedAdmin = true;
       } else {
-        const { data: roleRecord } = await supabase
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        const adminClient = createAdminClient();
+        const { data: roleRecord } = await adminClient
           .from("admin_roles")
           .select("role")
           .eq("user_id", user.id)
