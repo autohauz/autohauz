@@ -50,6 +50,36 @@ export async function GET(request: NextRequest) {
           console.error("[Auth Callback] Welcome email failed:", err),
         );
       }
+
+      // ── Pending role auto-apply ────────────────────────────────────────────
+      // If an admin pre-assigned a role for this email before the user had an
+      // account, apply it now and remove the pending entry.
+      if (data.user.email) {
+        const email = data.user.email.toLowerCase();
+        const { data: pending } = await admin
+          .from("pending_admin_roles")
+          .select("id, role, mfa_required")
+          .ilike("email", email)
+          .maybeSingle();
+
+        if (pending) {
+          await admin.from("admin_roles").upsert(
+            {
+              user_id: data.user.id,
+              role: pending.role,
+              active: true,
+              mfa_required: pending.mfa_required ?? false,
+            },
+            { onConflict: "user_id" },
+          );
+          // Clean up the pending entry
+          await admin.from("pending_admin_roles").delete().eq("id", pending.id);
+          console.log(
+            `[Auth Callback] Applied pending role "${pending.role}" to ${email}`,
+          );
+        }
+      }
+      // ── End pending role ───────────────────────────────────────────────────
     }
   }
 

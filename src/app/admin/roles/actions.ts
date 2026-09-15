@@ -14,6 +14,13 @@ export type AdminRoleEntry = {
   createdAt: string;
 };
 
+export type PendingRoleEntry = {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
+
 export type RoleActionState = {
   status: "idle" | "success" | "error";
   message: string;
@@ -133,15 +140,30 @@ export async function assignAdminRole(
   const supabase = createAdminClient();
 
   // Look up the user
-  let user = await searchUserByEmail(email);
+  const user = await searchUserByEmail(email);
+
   if (!user) {
+    // No account yet — store a pending role so it is applied automatically
+    // the first time this person signs in with Google.
+    const { error: pendingError } = await supabase
+      .from("pending_admin_roles")
+      .upsert({ email, role, mfa_required: mfaRequired }, { onConflict: "email" });
+
+    if (pendingError) {
+      return {
+        status: "error",
+        message: `Could not save pending role: ${pendingError.message}. Make sure the "pending_admin_roles" table exists in Supabase.`,
+      };
+    }
+
+    revalidatePath("/admin/roles");
     return {
-      status: "error",
-      message: `No account found for "${email}". The person must sign up at cars-365.com.au first before you can grant them admin access.`,
+      status: "success",
+      message: `Role "${role}" queued for ${email}. They will automatically get admin access the first time they sign in with Google.`,
     };
   }
 
-  // Upsert admin role
+  // User already has an account — assign the role immediately.
   const { error } = await supabase.from("admin_roles").upsert(
     {
       user_id: user.id,
@@ -172,6 +194,33 @@ export async function assignAdminRole(
     status: "success",
     message: `Role "${role}" assigned to ${user.email}${user.fullName ? ` (${user.fullName})` : ""} successfully.`,
   };
+}
+
+/** List all pending (not-yet-signed-up) role assignments */
+export async function getPendingAdminRoles(): Promise<PendingRoleEntry[]> {
+  await requireAdminRole(["owner", "admin", "super_admin"]);
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("pending_admin_roles")
+    .select("id, email, role, created_at")
+    .order("created_at", { ascending: false });
+  if (error) return []; // table may not exist yet — fail silently
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    email: r.email,
+    role: r.role,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Cancel a pending role invitation */
+export async function cancelPendingRole(id: string): Promise<RoleActionState> {
+  await requireAdminRole(["owner", "admin", "super_admin"]);
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("pending_admin_roles").delete().eq("id", id);
+  if (error) return { status: "error", message: `Failed to cancel: ${error.message}` };
+  revalidatePath("/admin/roles");
+  return { status: "success", message: "Pending invitation cancelled." };
 }
 
 /** Revoke (deactivate) an admin role */
