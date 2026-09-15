@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertCircle } from "lucide-react";
 
 // Uses the dedicated API route instead of a Server Action so that Vercel's
@@ -11,6 +12,7 @@ const MAX_UPLOAD_SIZE_MB = MAX_UPLOAD_SIZE_BYTES / 1024 / 1024;
 const ACCEPTED_UPLOAD_TYPES = ".csv,.xlsx,.xls";
 
 export function BulkUpload() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -63,6 +65,7 @@ export function BulkUpload() {
       if (json.success) {
         setResult({ success: json.count, skipped: json.skipped ?? 0 });
         setFile(null);
+        router.refresh();
       } else if (json.errors) {
         setResult({ errors: json.errors });
       } else {
