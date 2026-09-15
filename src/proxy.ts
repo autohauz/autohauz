@@ -278,9 +278,17 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const {
+  let {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // If getUser fails (e.g. Edge network timeout), fallback to the signed cookie session
+  if (!user) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.user) {
+      user = sessionData.session.user;
+    }
+  }
 
   if (!user) {
     const redirectUrl = request.nextUrl.clone();
@@ -289,43 +297,19 @@ export async function proxy(request: NextRequest) {
       "redirectedFrom",
       request.nextUrl.pathname + request.nextUrl.search,
     );
-    return NextResponse.redirect(redirectUrl);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+    // Propagate refreshed cookies to the redirect
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
   }
 
-  if (isAdminRoute && user) {
-    let isAuthorizedAdmin = isAllowlistedAdminEmail(user.email);
-
-    if (!isAuthorizedAdmin) {
-      const platformRole = user.app_metadata?.platform_role;
-      if (
-        platformRole === "owner" ||
-        platformRole === "admin" ||
-        platformRole === "moderator"
-      ) {
-        isAuthorizedAdmin = true;
-      } else {
-        const { createAdminClient } = await import("@/lib/supabase/admin");
-        const adminClient = createAdminClient();
-        const { data: roleRecord } = await adminClient
-          .from("admin_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("active", true)
-          .maybeSingle();
-
-        if (roleRecord) {
-          isAuthorizedAdmin = true;
-        }
-      }
-    }
-
-    if (!isAuthorizedAdmin) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/";
-      return NextResponse.redirect(redirectUrl);
-    }
-  }
-
+  // We rely on `requireAdmin()` in `src/app/admin/layout.tsx` to rigorously 
+  // enforce `admin_roles` authorization. Attempting to query the database in 
+  // Edge middleware causes intermittent network timeouts which appear to the 
+  // user as sudden random logouts during navigation.
+  
   return response;
 }
 
