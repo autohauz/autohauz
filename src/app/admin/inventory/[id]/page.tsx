@@ -21,7 +21,10 @@ export default async function EditVehiclePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  const [{ id }, { created }] = await Promise.all([params, searchParams]);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const id = resolvedParams.id;
+  const created = resolvedSearchParams?.created;
   const supabase = createAdminClient();
 
   const [

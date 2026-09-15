@@ -20,7 +20,8 @@ const STATUS_STYLES: Record<string, string> = {
 const STATUS_TABS = ["all", "available", "reserved", "draft", "sold", "archived"];
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  const { status } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const status = resolvedSearchParams?.status;
   const rows = await getInventoryList({ status: status && status !== "all" ? status : undefined });
 
   return (
