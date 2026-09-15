@@ -2,6 +2,7 @@
 
 import { revalidateTag, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdmin } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { vehicleCreateSchema, vehicleUpdateSchema } from "@/lib/validation/vehicle";
@@ -59,7 +60,12 @@ async function buildSlug(supabase: any, data: any): Promise<string> {
   return slugify(`${data.year}-${mk?.slug ?? "car"}-${md?.slug ?? ""}-${data.variant ?? ""}-${data.stockId}`);
 }
 
-function mimeFor(path: string) {
+/**
+ * Safe MIME type detection — never throws on missing/invalid path.
+ * Previously: `function mimeFor(path: string)` — would throw TypeError on undefined.
+ */
+function mimeFor(path: string | undefined | null): string {
+  if (!path) return "image/jpeg";
   if (path.endsWith(".png")) return "image/png";
   if (path.endsWith(".webp")) return "image/webp";
   return "image/jpeg";
@@ -71,22 +77,31 @@ function mimeFor(path: string) {
  * Strategy:
  * 1. Single SELECT for all paths at once (IN query) — O(1) round trips instead of O(N).
  * 2. For any paths not yet in media_assets, bulk-insert them in one INSERT.
- * 3. Return a map of path → media_asset id.
+ * 3. Return { idMap } on success, { idMap, error } on any DB failure.
+ *    Callers must check .error and return early.
  */
 async function resolveMediaIds(
   supabase: any,
   images: { path: string; url: string; isCover: boolean }[],
   uploadedBy: string,
-): Promise<Map<string, string>> {
-  if (images.length === 0) return new Map();
+): Promise<{ idMap: Map<string, string>; error?: string }> {
+  if (images.length === 0) return { idMap: new Map() };
 
-  const paths = images.map((i) => i.path);
+  // Filter out any images with empty/missing paths before touching the DB
+  const validImages = images.filter((i) => i.path && i.path.trim() !== "");
+  if (validImages.length === 0) return { idMap: new Map() };
+
+  const paths = validImages.map((i) => i.path);
 
   // Single round trip: fetch all existing media_assets for these paths
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from("media_assets")
     .select("id, storage_key")
     .in("storage_key", paths);
+
+  if (selectError) {
+    return { idMap: new Map(), error: `Failed to look up media assets: ${selectError.message}` };
+  }
 
   const idMap = new Map<string, string>(
     (existing ?? []).map((r: any) => [r.storage_key, r.id]),
@@ -97,188 +112,234 @@ async function resolveMediaIds(
 
   if (newPaths.length > 0) {
     // Single bulk INSERT for all new media_assets
-    const { data: inserted } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from("media_assets")
       .insert(newPaths.map((p) => ({ storage_key: p, mime: mimeFor(p), uploaded_by: uploadedBy })))
       .select("id, storage_key");
+
+    if (insertError) {
+      // Return the partial idMap so existing images still work, but signal the error
+      return { idMap, error: `Failed to save media assets: ${insertError.message}` };
+    }
 
     for (const r of inserted ?? []) {
       idMap.set(r.storage_key, r.id);
     }
   }
 
-  return idMap;
+  return { idMap };
 }
 
 /**
  * Bulk-write vehicle_images rows in a single INSERT.
  * For updates: caller deletes existing rows first, then calls this.
+ *
+ * @returns undefined on success, or an error string that callers must surface.
  */
 async function writeVehicleImages(
   supabase: any,
   vehicleId: string,
   images: { path: string; url: string; isCover: boolean }[],
   mediaIdMap: Map<string, string>,
-) {
-  if (images.length === 0) return;
+): Promise<string | undefined> {
+  if (images.length === 0) return undefined;
 
   const rows = images
     .map((img, i) => {
+      if (!img.path) return null; // skip images with no storage path
       const mediaId = mediaIdMap.get(img.path);
-      if (!mediaId) return null;
+      if (!mediaId) return null; // skip if media_asset lookup failed
       return { vehicle_id: vehicleId, media_id: mediaId, sort_order: i, is_cover: img.isCover };
     })
     .filter(Boolean);
 
-  if (rows.length > 0) {
-    await supabase.from("vehicle_images").insert(rows);
-  }
+  if (rows.length === 0) return undefined;
+
+  const { error } = await supabase.from("vehicle_images").insert(rows);
+  if (error) return `Failed to save vehicle images: ${error.message}`;
+
+  return undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function createVehicle(_prev: unknown, formData: FormData) {
-  const user = await requireAdmin();
-  const rawRaw = Object.fromEntries(formData.entries());
-  const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
-  const raw = sanitizeRaw(rawRaw);
+  try {
+    const user = await requireAdmin();
+    const rawRaw = Object.fromEntries(formData.entries());
+    const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
+    const raw = sanitizeRaw(rawRaw);
 
-  const parsed = vehicleCreateSchema.safeParse({
-    ...raw,
-    roadworthyIncluded:    rawRaw.roadworthyIncluded    === "on",
-    financeAvailable:      rawRaw.financeAvailable       === "on",
-    tradeInWelcome:        rawRaw.tradeInWelcome         === "on",
-    inspectionAvailable:   rawRaw.inspectionAvailable    === "on",
-    isFeatured:            rawRaw.isFeatured             === "on",
-    featureIds,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    const parsed = vehicleCreateSchema.safeParse({
+      ...raw,
+      roadworthyIncluded:    rawRaw.roadworthyIncluded    === "on",
+      financeAvailable:      rawRaw.financeAvailable       === "on",
+      tradeInWelcome:        rawRaw.tradeInWelcome         === "on",
+      inspectionAvailable:   rawRaw.inspectionAvailable    === "on",
+      isFeatured:            rawRaw.isFeatured             === "on",
+      featureIds,
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    }
+
+    const d = parsed.data;
+    const supabase = createAdminClient();
+
+    // Parse images JSON early so we can start resolving media in parallel with slug build
+    let images: { path: string; url: string; isCover: boolean }[] = [];
+    const imageKeysJson = formData.get("imageKeys") as string | null;
+    if (imageKeysJson) {
+      try { images = JSON.parse(imageKeysJson); } catch { /* ignore malformed JSON */ }
+    }
+
+    // ── Parallel: build slug + resolve media asset IDs ──────────────────────
+    const [slug, mediaResult] = await Promise.all([
+      buildSlug(supabase, d),
+      resolveMediaIds(supabase, images, user.id),
+    ]);
+
+    if (mediaResult.error) return { error: mediaResult.error };
+
+    const { featureIds: fids, ...cols } = d;
+    const row = clean({
+      stock_id: d.stockId, slug, make_id: d.makeId, model_id: d.modelId, variant: cols.variant,
+      year: d.year, mileage_km: d.mileageKm, fuel_type: d.fuelType, transmission: d.transmission,
+      body_type: d.bodyType, drive_type: cols.driveType ?? null, engine: cols.engine, power_kw: cols.powerKw ?? null,
+      seats: cols.seats ?? null, doors: cols.doors ?? null, exterior_color: cols.exteriorColor, interior: cols.interior,
+      vin: cols.vin, registration: cols.registration, rego_expiry: cols.regoExpiry, price: d.price,
+      weekly_estimate: cols.weeklyEstimate ?? null, description: cols.description, safety_rating: cols.safetyRating,
+      warranty_text: cols.warrantyText, roadworthy_included: d.roadworthyIncluded, finance_available: d.financeAvailable,
+      trade_in_welcome: d.tradeInWelcome, inspection_available: d.inspectionAvailable, status: d.status,
+      is_featured: d.isFeatured, featured_order: cols.featuredOrder ?? null, location_id: cols.locationId ?? null,
+      dealer_notes: cols.dealerNotes,
+      published_at: d.status !== "draft" ? new Date().toISOString() : null,
+    });
+
+    const { data: created, error: insertError } = await supabase.from("vehicles").insert(row).select("id").single();
+    if (insertError) return { error: insertError.message };
+
+    // ── Sequential: features then images (errors from each are surfaced) ─────
+    if (fids.length > 0) {
+      const { error: featuresError } = await supabase
+        .from("vehicle_features")
+        .insert(fids.map((fid) => ({ vehicle_id: created.id, feature_id: fid })));
+      if (featuresError) return { error: `Failed to save vehicle features: ${featuresError.message}` };
+    }
+
+    const imageWriteError = await writeVehicleImages(supabase, created.id, images, mediaResult.idMap);
+    if (imageWriteError) return { error: imageWriteError };
+
+    // Fire-and-forget audit log — doesn't block the redirect
+    logActivityBg(user.id, "vehicle.created", created.id, { stock_id: d.stockId });
+    revalidatePublic();
+    redirect(`/admin/inventory/${created.id}?created=1`);
+  } catch (err) {
+    // redirect() throws a special internal Next.js error — must re-throw it
+    if (isRedirectError(err)) throw err;
+    console.error("[createVehicle] Unexpected error:", err);
+    return { error: err instanceof Error ? err.message : "An unexpected error occurred. Please try again." };
   }
-
-  const d = parsed.data;
-  const supabase = createAdminClient();
-
-  // Parse images JSON early so we can start resolving media in parallel with slug build
-  let images: { path: string; url: string; isCover: boolean }[] = [];
-  const imageKeysJson = formData.get("imageKeys") as string | null;
-  if (imageKeysJson) {
-    try { images = JSON.parse(imageKeysJson); } catch { /* ignore */ }
-  }
-
-  // ── Parallel: build slug + resolve media asset IDs ──────────────────────
-  const [slug, mediaIdMap] = await Promise.all([
-    buildSlug(supabase, d),
-    resolveMediaIds(supabase, images, user.id),
-  ]);
-
-  const { featureIds: fids, ...cols } = d;
-  const row = clean({
-    stock_id: d.stockId, slug, make_id: d.makeId, model_id: d.modelId, variant: cols.variant,
-    year: d.year, mileage_km: d.mileageKm, fuel_type: d.fuelType, transmission: d.transmission,
-    body_type: d.bodyType, drive_type: cols.driveType ?? null, engine: cols.engine, power_kw: cols.powerKw ?? null,
-    seats: cols.seats ?? null, doors: cols.doors ?? null, exterior_color: cols.exteriorColor, interior: cols.interior,
-    vin: cols.vin, registration: cols.registration, rego_expiry: cols.regoExpiry, price: d.price,
-    weekly_estimate: cols.weeklyEstimate ?? null, description: cols.description, safety_rating: cols.safetyRating,
-    warranty_text: cols.warrantyText, roadworthy_included: d.roadworthyIncluded, finance_available: d.financeAvailable,
-    trade_in_welcome: d.tradeInWelcome, inspection_available: d.inspectionAvailable, status: d.status,
-    is_featured: d.isFeatured, featured_order: cols.featuredOrder ?? null, location_id: cols.locationId ?? null,
-    dealer_notes: cols.dealerNotes,
-    published_at: d.status !== "draft" ? new Date().toISOString() : null,
-  });
-
-  const { data: created, error } = await supabase.from("vehicles").insert(row).select("id").single();
-  if (error) return { error: error.message };
-
-  // ── Parallel: features + images ─────────────────────────────────────────
-  await Promise.all([
-    fids.length > 0
-      ? supabase.from("vehicle_features").insert(fids.map((fid) => ({ vehicle_id: created.id, feature_id: fid })))
-      : Promise.resolve(),
-    writeVehicleImages(supabase, created.id, images, mediaIdMap),
-  ]);
-
-  // Fire-and-forget audit log — doesn't block the redirect
-  logActivityBg(user.id, "vehicle.created", created.id, { stock_id: d.stockId });
-  revalidatePublic();
-  redirect(`/admin/inventory/${created.id}?created=1`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function updateVehicle(_prev: unknown, formData: FormData) {
-  const user = await requireAdmin();
-  const rawRaw = Object.fromEntries(formData.entries());
-  const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
-  const raw = sanitizeRaw(rawRaw);
+  try {
+    const user = await requireAdmin();
+    const rawRaw = Object.fromEntries(formData.entries());
+    const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
+    const raw = sanitizeRaw(rawRaw);
 
-  const parsed = vehicleUpdateSchema.safeParse({
-    ...raw,
-    roadworthyIncluded:    rawRaw.roadworthyIncluded    === "on",
-    financeAvailable:      rawRaw.financeAvailable       === "on",
-    tradeInWelcome:        rawRaw.tradeInWelcome         === "on",
-    inspectionAvailable:   rawRaw.inspectionAvailable    === "on",
-    isFeatured:            rawRaw.isFeatured             === "on",
-    featureIds,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
-  }
+    const parsed = vehicleUpdateSchema.safeParse({
+      ...raw,
+      roadworthyIncluded:    rawRaw.roadworthyIncluded    === "on",
+      financeAvailable:      rawRaw.financeAvailable       === "on",
+      tradeInWelcome:        rawRaw.tradeInWelcome         === "on",
+      inspectionAvailable:   rawRaw.inspectionAvailable    === "on",
+      isFeatured:            rawRaw.isFeatured             === "on",
+      featureIds,
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    }
 
-  const d = parsed.data;
-  const supabase = createAdminClient();
-  const { featureIds: fids, id, ...cols } = d;
+    const d = parsed.data;
+    const supabase = createAdminClient();
+    const { featureIds: fids, id, ...cols } = d;
 
-  // Parse images JSON early
-  let images: { path: string; url: string; isCover: boolean }[] = [];
-  const imageKeysJson = formData.get("imageKeys") as string | null;
-  if (imageKeysJson) {
-    try { images = JSON.parse(imageKeysJson); } catch { /* ignore */ }
-  }
+    // Parse images JSON early
+    let images: { path: string; url: string; isCover: boolean }[] = [];
+    const imageKeysJson = formData.get("imageKeys") as string | null;
+    if (imageKeysJson) {
+      try { images = JSON.parse(imageKeysJson); } catch { /* ignore malformed JSON */ }
+    }
 
-  const row = clean({
-    variant: cols.variant, year: cols.year, mileage_km: cols.mileageKm, fuel_type: cols.fuelType,
-    transmission: cols.transmission, body_type: cols.bodyType, drive_type: cols.driveType,
-    engine: cols.engine, power_kw: cols.powerKw, seats: cols.seats, doors: cols.doors,
-    exterior_color: cols.exteriorColor, interior: cols.interior, vin: cols.vin, registration: cols.registration,
-    rego_expiry: cols.regoExpiry, price: cols.price, weekly_estimate: cols.weeklyEstimate, description: cols.description,
-    safety_rating: cols.safetyRating, warranty_text: cols.warrantyText, roadworthy_included: cols.roadworthyIncluded,
-    finance_available: cols.financeAvailable, trade_in_welcome: cols.tradeInWelcome, inspection_available: cols.inspectionAvailable,
-    status: cols.status, is_featured: cols.isFeatured, featured_order: cols.featuredOrder,
-    location_id: cols.locationId, dealer_notes: cols.dealerNotes,
-  });
+    const row = clean({
+      variant: cols.variant, year: cols.year, mileage_km: cols.mileageKm, fuel_type: cols.fuelType,
+      transmission: cols.transmission, body_type: cols.bodyType, drive_type: cols.driveType,
+      engine: cols.engine, power_kw: cols.powerKw, seats: cols.seats, doors: cols.doors,
+      exterior_color: cols.exteriorColor, interior: cols.interior, vin: cols.vin, registration: cols.registration,
+      rego_expiry: cols.regoExpiry, price: cols.price, weekly_estimate: cols.weeklyEstimate, description: cols.description,
+      safety_rating: cols.safetyRating, warranty_text: cols.warrantyText, roadworthy_included: cols.roadworthyIncluded,
+      finance_available: cols.financeAvailable, trade_in_welcome: cols.tradeInWelcome, inspection_available: cols.inspectionAvailable,
+      status: cols.status, is_featured: cols.isFeatured, featured_order: cols.featuredOrder,
+      location_id: cols.locationId, dealer_notes: cols.dealerNotes,
+    });
 
-  // ── Parallel: vehicle row update + media ID resolution ──────────────────
-  const [updateResult, mediaIdMap] = await Promise.all([
-    supabase.from("vehicles").update(row).eq("id", id),
-    resolveMediaIds(supabase, images, user.id),
-  ]);
-  if (updateResult.error) return { error: updateResult.error.message };
+    // ── Step 1: Update the vehicle row ───────────────────────────────────────
+    const { error: updateError } = await supabase.from("vehicles").update(row).eq("id", id);
+    if (updateError) return { error: `Failed to update vehicle: ${updateError.message}` };
 
-  // ── Parallel: features replace + images replace ──────────────────────────
-  await Promise.all([
-    // Features: delete-then-reinsert (must be sequential within itself)
-    (async () => {
-      if (fids !== undefined) {
-        await supabase.from("vehicle_features").delete().eq("vehicle_id", id);
-        if (fids.length > 0) {
-          await supabase.from("vehicle_features").insert(fids.map((fid) => ({ vehicle_id: id, feature_id: fid })));
+    // ── Step 2: Resolve media asset IDs for submitted images ─────────────────
+    const mediaResult = await resolveMediaIds(supabase, images, user.id);
+    if (mediaResult.error) return { error: mediaResult.error };
+
+    // ── Step 3: Replace vehicle features (only if featureIds was in form) ────
+    if (fids !== undefined) {
+      const { error: deleteFeaturesError } = await supabase
+        .from("vehicle_features")
+        .delete()
+        .eq("vehicle_id", id);
+      if (deleteFeaturesError) {
+        return { error: `Failed to clear vehicle features: ${deleteFeaturesError.message}` };
+      }
+
+      if (fids.length > 0) {
+        const { error: insertFeaturesError } = await supabase
+          .from("vehicle_features")
+          .insert(fids.map((fid) => ({ vehicle_id: id, feature_id: fid })));
+        if (insertFeaturesError) {
+          return { error: `Failed to save vehicle features: ${insertFeaturesError.message}` };
         }
       }
-    })(),
-    // Images: delete-then-reinsert (must be sequential within itself)
-    (async () => {
-      if (imageKeysJson) {
-        await supabase.from("vehicle_images").delete().eq("vehicle_id", id);
-        await writeVehicleImages(supabase, id!, images, mediaIdMap);
-      }
-    })(),
-  ]);
+    }
 
-  // Fire-and-forget audit log
-  logActivityBg(user.id, "vehicle.updated", id!);
-  revalidatePublic();
-  return { ok: true };
+    // ── Step 4: Replace vehicle images (only if imageKeys field was submitted) ─
+    // imageKeysJson === null means the Images tab was NOT included in this
+    // submission — preserve existing images. An empty array "[]" means the
+    // user cleared all images, which is a valid intentional action.
+    if (imageKeysJson !== null) {
+      const { error: deleteImagesError } = await supabase
+        .from("vehicle_images")
+        .delete()
+        .eq("vehicle_id", id);
+      if (deleteImagesError) {
+        return { error: `Failed to clear vehicle images: ${deleteImagesError.message}` };
+      }
+
+      const imageWriteError = await writeVehicleImages(supabase, id!, images, mediaResult.idMap);
+      if (imageWriteError) return { error: imageWriteError };
+    }
+
+    // Fire-and-forget audit log
+    logActivityBg(user.id, "vehicle.updated", id!);
+    revalidatePublic();
+    return { ok: true };
+  } catch (err) {
+    console.error("[updateVehicle] Unexpected error:", err);
+    return { error: err instanceof Error ? err.message : "An unexpected error occurred. Please try again." };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
