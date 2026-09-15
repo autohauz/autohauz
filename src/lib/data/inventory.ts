@@ -245,167 +245,173 @@ export async function getVehicleListing(
  * `city` is intentionally unsupported: no landing page filters by city, and
  * resolving it would need the extra locations round-trip this exists to avoid.
  */
-export const getVehicleCount = unstable_cache(
-  async (filters: Pick<VehicleFilters, "make" | "model" | "bodyType" | "priceMax">): Promise<number> => {
-    const supabase = createAdminClient();
-    // The make/model filters target embedded columns, so the `!inner` joins
-    // must be present even though `head: true` returns no rows — without them
-    // PostgREST cannot resolve `makes.slug`.
-    const base = supabase
-      .from("vehicles")
-      .select("id, makes:make_id!inner ( slug ), models:model_id!inner ( slug )", {
-        count: "exact",
-        head: true,
-      })
-      .in("status", PUBLIC_STATUSES);
-    const { count } = (await applyFilters(base, filters)) as { count: number | null };
-    return count ?? 0;
-  },
-  ["vehicle-count"],
-  { revalidate: 300, tags: ["vehicles"] },
-);
+export const getVehicleCount = async (filters: Pick<VehicleFilters, "make" | "model" | "bodyType" | "priceMax">): Promise<number> => {
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient();
+      // The make/model filters target embedded columns, so the `!inner` joins
+      // must be present even though `head: true` returns no rows — without them
+      // PostgREST cannot resolve `makes.slug`.
+      const base = supabase
+        .from("vehicles")
+        .select("id, makes:make_id!inner ( slug ), models:model_id!inner ( slug )", {
+          count: "exact",
+          head: true,
+        })
+        .in("status", PUBLIC_STATUSES);
+      const { count } = (await applyFilters(base, filters)) as { count: number | null };
+      return count ?? 0;
+    },
+    ["vehicle-count", JSON.stringify(filters)],
+    { revalidate: 300, tags: ["vehicles"] },
+  )();
+};
 
-export const getFeaturedVehicles = unstable_cache(
-  async (limit = 12): Promise<VehicleListItem[]> => {
-    const supabase = createAdminClient();
-    const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL").trim();
-    const { data } = await supabase
-      .from("vehicles")
-      .select(CARD_SELECT)
-      .eq("status", "available")
-      .eq("is_featured", true)
-      .order("featured_order", { ascending: true, nullsFirst: false })
-      .order("published_at", { ascending: false })
-      .limit(limit);
-    const items = (data ?? []).map((r: RawRow) => toListItem(r, supabaseUrl));
-    // Backfill with newest available cars if fewer than 4 featured (SRS FR-1).
-    if (items.length < 4) {
-      const { data: newest } = await supabase
+export const getFeaturedVehicles = async (limit = 12): Promise<VehicleListItem[]> => {
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient();
+      const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL").trim();
+      const { data } = await supabase
         .from("vehicles")
         .select(CARD_SELECT)
         .eq("status", "available")
+        .eq("is_featured", true)
+        .order("featured_order", { ascending: true, nullsFirst: false })
         .order("published_at", { ascending: false })
         .limit(limit);
-      const seen = new Set(items.map((i) => i.id));
-      for (const r of (newest ?? []) as RawRow[]) {
-        if (seen.has(r.id)) continue;
-        items.push(toListItem(r, supabaseUrl));
-        if (items.length >= limit) break;
+      const items = (data ?? []).map((r: RawRow) => toListItem(r, supabaseUrl));
+      // Backfill with newest available cars if fewer than 4 featured (SRS FR-1).
+      if (items.length < 4) {
+        const { data: newest } = await supabase
+          .from("vehicles")
+          .select(CARD_SELECT)
+          .eq("status", "available")
+          .order("published_at", { ascending: false })
+          .limit(limit);
+        const seen = new Set(items.map((i) => i.id));
+        for (const r of (newest ?? []) as RawRow[]) {
+          if (seen.has(r.id)) continue;
+          items.push(toListItem(r, supabaseUrl));
+          if (items.length >= limit) break;
+        }
       }
-    }
-    return items;
-  },
-  ["featured-vehicles"],
-  { revalidate: 900, tags: ["vehicles", "public"] },
-);
+      return items;
+    },
+    ["featured-vehicles", String(limit)],
+    { revalidate: 900, tags: ["vehicles", "public"] },
+  )();
+};
 
-export const getVehicleBySlug = unstable_cache(
-  async (slug: string): Promise<VehicleDetail | null> => {
-    const supabase = createAdminClient();
-    const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL").trim();
-    const { data: row, error } = await supabase
-      .from("vehicles")
-      .select(`
-        id, stock_id, slug, make_id, model_id, variant, year, mileage_km,
-        fuel_type, transmission, body_type, drive_type, engine, power_kw, seats, doors,
-        exterior_color, interior, vin, registration, rego_expiry,
-        price, previous_price, weekly_estimate, status, is_featured, published_at, sold_at,
-        description, safety_rating, warranty_text,
-        roadworthy_included, finance_available, trade_in_welcome, inspection_available,
-        seo_title, seo_description,
-        makes:make_id ( name, slug ),
-        models:model_id ( name, slug ),
-        locations:location_id ( id, name, slug, address, city, state, postcode, phone, whatsapp, lat, lng, hours ),
-        vehicle_images ( id, alt_text, sort_order, is_cover, media_assets:media_id ( storage_key ) ),
-        vehicle_features ( features:feature_id ( id, name, slug, category ) )
-      `)
-      .eq("slug", slug)
-      .in("status", PUBLIC_STATUSES)
-      .maybeSingle();
+export const getVehicleBySlug = async (slug: string): Promise<VehicleDetail | null> => {
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient();
+      const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL").trim();
+      const { data: row, error } = await supabase
+        .from("vehicles")
+        .select(`
+          id, stock_id, slug, make_id, model_id, variant, year, mileage_km,
+          fuel_type, transmission, body_type, drive_type, engine, power_kw, seats, doors,
+          exterior_color, interior, vin, registration, rego_expiry,
+          price, previous_price, weekly_estimate, status, is_featured, published_at, sold_at,
+          description, safety_rating, warranty_text,
+          roadworthy_included, finance_available, trade_in_welcome, inspection_available,
+          seo_title, seo_description,
+          makes:make_id ( name, slug ),
+          models:model_id ( name, slug ),
+          locations:location_id ( id, name, slug, address, city, state, postcode, phone, whatsapp, lat, lng, hours ),
+          vehicle_images ( id, alt_text, sort_order, is_cover, media_assets:media_id ( storage_key ) ),
+          vehicle_features ( features:feature_id ( id, name, slug, category ) )
+        `)
+        .eq("slug", slug)
+        .in("status", PUBLIC_STATUSES)
+        .maybeSingle();
 
-    // Throw on a real DB error so unstable_cache does NOT cache a transient
-    // failure as a permanent null (which would 404 the VDP until cache expiry).
-    // A genuine "not found" (no error, no row) still caches null, as intended.
-    if (error) throw new Error(`getVehicleBySlug failed: ${error.message}`);
-    if (!row) return null;
-    const r = row as RawRow;
-    const base = toListItem(r, supabaseUrl);
+      // Throw on a real DB error so unstable_cache does NOT cache a transient
+      // failure as a permanent null (which would 404 the VDP until cache expiry).
+      // A genuine "not found" (no error, no row) still caches null, as intended.
+      if (error) throw new Error(`getVehicleBySlug failed: ${error.message}`);
+      if (!row) return null;
+      const r = row as RawRow;
+      const base = toListItem(r, supabaseUrl);
 
-    const images: VehicleImage[] = ((r.vehicle_images ?? []) as RawRow[])
-      .map((img) => {
-        const rel = img.media_assets;
-        const media = Array.isArray(rel) ? rel[0] : rel;
-        return {
-          id: img.id,
-          url: media?.storage_key ? buildMediaUrl(supabaseUrl, media.storage_key) : getBodyTypeFallback(r.body_type as BodyType),
-          altText: img.alt_text ?? null,
-          sortOrder: img.sort_order ?? 0,
-          isCover: !!img.is_cover,
-        };
-      })
-      .sort((a, b) => {
-        if (a.isCover && !b.isCover) return -1;
-        if (!a.isCover && b.isCover) return 1;
-        return a.sortOrder - b.sortOrder;
-      });
+      const images: VehicleImage[] = ((r.vehicle_images ?? []) as RawRow[])
+        .map((img) => {
+          const rel = img.media_assets;
+          const media = Array.isArray(rel) ? rel[0] : rel;
+          return {
+            id: img.id,
+            url: media?.storage_key ? buildMediaUrl(supabaseUrl, media.storage_key) : getBodyTypeFallback(r.body_type as BodyType),
+            altText: img.alt_text ?? null,
+            sortOrder: img.sort_order ?? 0,
+            isCover: !!img.is_cover,
+          };
+        })
+        .sort((a, b) => {
+          if (a.isCover && !b.isCover) return -1;
+          if (!a.isCover && b.isCover) return 1;
+          return a.sortOrder - b.sortOrder;
+        });
 
-    const features: Feature[] = ((r.vehicle_features ?? []) as RawRow[])
-      .map((vf) => vf.features)
-      .filter(Boolean)
-      .map((f: RawRow) => ({
-        id: f.id,
-        name: f.name,
-        slug: f.slug,
-        category: f.category as FeatureCategory,
-      }));
+      const features: Feature[] = ((r.vehicle_features ?? []) as RawRow[])
+        .map((vf) => vf.features)
+        .filter(Boolean)
+        .map((f: RawRow) => ({
+          id: f.id,
+          name: f.name,
+          slug: f.slug,
+          category: f.category as FeatureCategory,
+        }));
 
-    const vin: string | null = r.vin ?? null;
+      const vin: string | null = r.vin ?? null;
 
-    return {
-      ...base,
-      makeId: r.make_id,
-      modelId: r.model_id,
-      driveType: r.drive_type ?? null,
-      engine: r.engine ?? null,
-      powerKw: r.power_kw ?? null,
-      seats: r.seats ?? null,
-      doors: r.doors ?? null,
-      exteriorColor: r.exterior_color ?? null,
-      interior: r.interior ?? null,
-      // Only the last 6 chars are exposed publicly (SRS §13.1).
-      vinMasked: vin ? `••••${vin.slice(-6)}` : null,
-      registration: r.registration ?? null,
-      regoExpiry: r.rego_expiry ?? null,
-      description: r.description ?? null,
-      safetyRating: r.safety_rating ?? null,
-      warrantyText: r.warranty_text ?? null,
-      inspectionAvailable: !!r.inspection_available,
-      seoTitle: r.seo_title ?? null,
-      seoDescription: r.seo_description ?? null,
-      images,
-      features,
-      location: r.locations
-        ? {
-            id: r.locations.id,
-            name: r.locations.name,
-            slug: r.locations.slug,
-            address: r.locations.address,
-            city: r.locations.city,
-            state: r.locations.state,
-            postcode: r.locations.postcode ?? null,
-            phone: r.locations.phone ?? null,
-            whatsapp: r.locations.whatsapp ?? null,
-            lat: r.locations.lat ?? null,
-            lng: r.locations.lng ?? null,
-            hours: r.locations.hours ?? {},
-          }
-        : null,
-      tiktokEmbedHtml: null,
-    };
-  },
-  ["vehicle-detail"],
-  { revalidate: 900, tags: ["vehicles", "public"] },
-);
+      return {
+        ...base,
+        makeId: r.make_id,
+        modelId: r.model_id,
+        driveType: r.drive_type ?? null,
+        engine: r.engine ?? null,
+        powerKw: r.power_kw ?? null,
+        seats: r.seats ?? null,
+        doors: r.doors ?? null,
+        exteriorColor: r.exterior_color ?? null,
+        interior: r.interior ?? null,
+        // Only the last 6 chars are exposed publicly (SRS §13.1).
+        vinMasked: vin ? `••••${vin.slice(-6)}` : null,
+        registration: r.registration ?? null,
+        regoExpiry: r.rego_expiry ?? null,
+        description: r.description ?? null,
+        safetyRating: r.safety_rating ?? null,
+        warrantyText: r.warranty_text ?? null,
+        inspectionAvailable: !!r.inspection_available,
+        seoTitle: r.seo_title ?? null,
+        seoDescription: r.seo_description ?? null,
+        images,
+        features,
+        location: r.locations
+          ? {
+              id: r.locations.id,
+              name: r.locations.name,
+              slug: r.locations.slug,
+              address: r.locations.address,
+              city: r.locations.city,
+              state: r.locations.state,
+              postcode: r.locations.postcode ?? null,
+              phone: r.locations.phone ?? null,
+              whatsapp: r.locations.whatsapp ?? null,
+              lat: r.locations.lat ?? null,
+              lng: r.locations.lng ?? null,
+              hours: r.locations.hours ?? {},
+            }
+          : null,
+        tiktokEmbedHtml: null,
+      };
+    },
+    ["vehicle-detail", slug],
+    { revalidate: 900, tags: ["vehicles", "public"] },
+  )();
+};
 
 /** Minimal vehicle context for lead pages reached via ?vehicle={id}. */
 export async function getVehicleLeadContext(
@@ -478,23 +484,25 @@ export async function getAllFeatures(): Promise<Feature[]> {
   return ((data ?? []) as RawRow[]).map((f) => ({ id: f.id, name: f.name, slug: f.slug, category: f.category }));
 }
 
-export const getModelsForMake = unstable_cache(
-  async (makeSlug: string): Promise<Model[]> => {
-    const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("models")
-      .select("id, make_id, name, slug, makes:make_id!inner ( slug )")
-      .eq("makes.slug", makeSlug)
-      .order("name", { ascending: true });
-    return ((data ?? []) as RawRow[]).map((m) => ({
-      id: m.id,
-      makeId: m.make_id,
-      name: m.name,
-      slug: m.slug,
-    }));
-  },
-  ["models-for-make"],
-  { revalidate: 3600, tags: ["makes", "public"] },
-);
+export const getModelsForMake = async (makeSlug: string): Promise<Model[]> => {
+  return unstable_cache(
+    async () => {
+      const supabase = createAdminClient();
+      const { data } = await supabase
+        .from("models")
+        .select("id, make_id, name, slug, makes:make_id!inner ( slug )")
+        .eq("makes.slug", makeSlug)
+        .order("name", { ascending: true });
+      return ((data ?? []) as RawRow[]).map((m) => ({
+        id: m.id,
+        makeId: m.make_id,
+        name: m.name,
+        slug: m.slug,
+      }));
+    },
+    ["models-for-make", makeSlug],
+    { revalidate: 3600, tags: ["makes", "public"] },
+  )();
+};
 
 export type { VehicleFilters, VehicleSort };

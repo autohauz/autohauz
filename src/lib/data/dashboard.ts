@@ -2,7 +2,6 @@
    Untyped Supabase client: rows surface as `any` and are shaped into typed
    projections before leaving this module. */
 import { unstable_cache } from "next/cache";
-import { cache } from "react";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,10 +40,7 @@ async function _getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
   return data as DashboardMetrics;
 }
 
-/**
- * Cached per-request so rapid admin navigation doesn't hammer the RPC.
- */
-export const getAdminDashboardMetrics = cache(_getAdminDashboardMetrics);
+export const getAdminDashboardMetrics = _getAdminDashboardMetrics;
 
 type RawRow = Record<string, any>;
 
@@ -93,8 +89,10 @@ async function _getInventoryList(filters?: { status?: string; q?: string }): Pro
  * Cached for 30 s — rapid tab switching won't re-query 200 rows each time.
  * Revalidate tag "vehicles" to bust after add/edit/delete.
  */
-export const getInventoryList = unstable_cache(
-  _getInventoryList,
-  ["admin-inventory-list"],
-  { revalidate: 30, tags: ["vehicles"] },
-);
+export const getInventoryList = async (filters?: { status?: string; q?: string }): Promise<InventoryListRow[]> => {
+  return unstable_cache(
+    async () => _getInventoryList(filters),
+    ["admin-inventory-list", JSON.stringify(filters || {})],
+    { revalidate: 30, tags: ["vehicles"] },
+  )();
+};
