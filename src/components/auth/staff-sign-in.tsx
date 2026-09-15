@@ -9,10 +9,18 @@ import { createClient } from "@/lib/supabase/client";
 export function StaffSignIn() {
   const params = useSearchParams();
   const redirectedFrom = params.get("redirectedFrom");
+  const urlError = params.get("error");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    urlError === "unauthorized" 
+      ? "You do not have permission to access the admin panel with this account. Please sign in with an administrator account." 
+      : urlError === "auth_failed" 
+      ? "Authentication failed. Please try again."
+      : null
+  );
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -2,6 +2,7 @@
    Untyped Supabase client: rows surface as `any` and are shaped into typed
    projections before leaving this module. */
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,14 +42,9 @@ async function _getAdminDashboardMetrics(): Promise<DashboardMetrics | null> {
 }
 
 /**
- * Cached for 60 s so rapid admin navigation doesn't hammer the RPC.
- * Revalidate tag "dashboard" to bust manually after mutations.
+ * Cached per-request so rapid admin navigation doesn't hammer the RPC.
  */
-export const getAdminDashboardMetrics = unstable_cache(
-  _getAdminDashboardMetrics,
-  ["admin-dashboard-metrics"],
-  { revalidate: 60, tags: ["dashboard"] },
-);
+export const getAdminDashboardMetrics = cache(_getAdminDashboardMetrics);
 
 type RawRow = Record<string, any>;
 

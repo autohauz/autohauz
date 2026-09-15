@@ -97,7 +97,7 @@ export async function requireAdmin() {
   const user = await requireUser();
 
   if (!(await userHasAdminAccess(user))) {
-    redirect("/");
+    redirect("/auth/sign-in?error=unauthorized");
   }
 
   return user;
@@ -124,7 +124,7 @@ export async function requireAdminRole(allowedRoles: string[]) {
   const hasSpecificRole = allowedRoles.includes(role);
 
   if (!isGlobalAdmin && !hasSpecificRole && !userHasPlatformRole(user, allowedRoles)) {
-    redirect("/");
+    redirect("/auth/sign-in?error=unauthorized");
   }
 
   return user;
