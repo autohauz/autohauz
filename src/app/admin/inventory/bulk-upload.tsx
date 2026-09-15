@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UploadCloud, FileSpreadsheet, X, CheckCircle2, AlertCircle, Download } from "lucide-react";
 import { processBulkUpload } from "./bulk-actions";
 
-const MAX_UPLOAD_SIZE_BYTES = 4 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
 const MAX_UPLOAD_SIZE_MB = MAX_UPLOAD_SIZE_BYTES / 1024 / 1024;
 const ACCEPTED_UPLOAD_TYPES = ".csv,.xlsx,.xls";
 

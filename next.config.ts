@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Next.js 15+ has moved serverActions out of experimental
   serverActions: {
-    bodySizeLimit: "4mb", // Vercel hobby limits to 4.5MB anyway
+    bodySizeLimit: "8mb", // WARNING: Vercel hard-limits request bodies to 4.5MB on all plans
   },
   turbopack: {
     root: process.cwd(),
