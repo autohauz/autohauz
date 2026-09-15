@@ -63,7 +63,11 @@ async function userHasAdminRoleRecord(
     query = query.in("role", roles);
   }
 
-  const { data } = await query.limit(1).maybeSingle();
+  const { data, error } = await query.limit(1).maybeSingle();
+
+  if (error) {
+    throw new Error(`Database error during admin role lookup: ${error.message}`);
+  }
 
   return !!data;
 }
@@ -77,13 +81,17 @@ export const getUserAdminRole = cache(async function getUserAdminRole(user: Supa
   if (isAllowlistedAdminEmail(user.email)) return "super_admin";
 
   const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("admin_roles")
     .select("role")
     .eq("user_id", user.id)
     .eq("active", true)
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    throw new Error(`Database error during admin role lookup: ${error.message}`);
+  }
 
   if (data?.role) return data.role;
   
@@ -111,13 +119,17 @@ export async function requireAdminRole(allowedRoles: string[]) {
   // Single DB query: fetch role once, check against both global admin and
   // allowed roles — avoids 2 sequential round-trips to Supabase.
   const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("admin_roles")
     .select("role")
     .eq("user_id", user.id)
     .eq("active", true)
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    throw new Error(`Database error during admin role lookup: ${error.message}`);
+  }
 
   const role = data?.role ?? "";
   const isGlobalAdmin = ["owner", "admin"].includes(role);
@@ -150,10 +162,17 @@ export async function requireApiAdmin() {
     return { user: null, response };
   }
 
-  if (!(await userHasAdminAccess(user))) {
+  try {
+    if (!(await userHasAdminAccess(user))) {
+      return {
+        user: null,
+        response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+      };
+    }
+  } catch (err: any) {
     return {
       user: null,
-      response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+      response: NextResponse.json({ error: "Internal server error during authorization" }, { status: 500 }),
     };
   }
 

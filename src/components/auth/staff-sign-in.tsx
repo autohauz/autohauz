@@ -27,14 +27,19 @@ export function StaffSignIn() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      setError(signInError.message);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+      // Full navigation so the server picks up the new session cookies.
+      window.location.href = redirectedFrom || "/admin";
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
       setLoading(false);
-      return;
     }
-    // Full navigation so the server picks up the new session cookies.
-    window.location.href = redirectedFrom || "/admin";
   }
 
   return (
@@ -89,15 +94,20 @@ export function StaffSignIn() {
           setLoading(true);
           const supabase = createClient();
           const next = redirectedFrom || "/admin";
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-              redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-              queryParams: { prompt: "select_account" }
-            },
-          });
-          if (error) {
-            setError(error.message);
+          try {
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+                queryParams: { prompt: "select_account" }
+              },
+            });
+            if (error) {
+              setError(error.message);
+              setLoading(false);
+            }
+          } catch (err: any) {
+            setError(err instanceof Error ? err.message : "Network error. Please try again.");
             setLoading(false);
           }
         }}

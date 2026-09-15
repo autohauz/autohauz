@@ -45,7 +45,7 @@ export function UsedCarsFilters({
   );
 
   const get = (k: string) => params.get(k) ?? "";
-  const activeCount = ["make", "model", "body", "fuel", "transmission", "price_min", "price_max", "year_min", "year_max", "km_max"].filter(
+  const activeCount = ["status", "make", "model", "body", "fuel", "transmission", "price_min", "price_max", "year_min", "year_max", "km_max"].filter(
     (k) => params.get(k),
   ).length;
 
@@ -65,6 +65,22 @@ export function UsedCarsFilters({
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
+        </select>
+      </FilterGroup>
+
+      {/* Availability */}
+      <FilterGroup label="Availability">
+        <select
+          value={get("status") || "available"}
+          onChange={(e) => {
+            const val = e.target.value;
+            setParam("status", val === "available" ? null : val);
+          }}
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+        >
+          <option value="all">All Cars</option>
+          <option value="available">Available</option>
+          <option value="sold">Sold</option>
         </select>
       </FilterGroup>
 

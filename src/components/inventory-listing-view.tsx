@@ -60,7 +60,7 @@ export async function InventoryListingView({
         <div>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {listing.total} {listing.total === 1 ? "car" : "cars"} available
+              {listing.total} {listing.total === 1 ? "car" : "cars"} {merged.status === "sold" ? "sold" : merged.status === "all" ? "found" : "available"}
             </p>
             <div className="lg:hidden">
               <Sheet>

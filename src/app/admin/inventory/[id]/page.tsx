@@ -99,7 +99,7 @@ export default async function EditVehiclePage({
           </a>
         ) : null}
       </div>
-      <VehicleForm action={updateVehicle} makes={makes} models={models} features={features} locations={locations} vehicle={v} selectedFeatureIds={selectedFeatureIds} mode="edit" />
+      <VehicleForm key={id} action={updateVehicle} makes={makes} models={models} features={features} locations={locations} vehicle={v} selectedFeatureIds={selectedFeatureIds} mode="edit" />
       {readiness ? (
         <SyndicationPanel vehicleId={id} extra={syndicationExtra} readiness={readiness} />
       ) : null}

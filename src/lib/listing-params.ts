@@ -41,6 +41,7 @@ export function parseVehicleSearchParams(sp: SP): {
     kmMax: num(sp, "km_max"),
     city: str(sp, "city"),
     q: str(sp, "q"),
+    status: oneOf<"all" | "available" | "sold">(sp, "status", ["all", "available", "sold"]) ?? "available",
   };
 
   const sort = oneOf<VehicleSort>(sp, "sort", SORTS) ?? "recommended";

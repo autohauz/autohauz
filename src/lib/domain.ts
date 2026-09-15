@@ -245,6 +245,7 @@ export type VehicleFilters = {
   features?: string[];
   city?: string;
   q?: string;
+  status?: "all" | "available" | "sold";
 };
 
 export type FacetCount = { value: string; label: string; count: number };

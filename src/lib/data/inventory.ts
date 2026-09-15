@@ -137,6 +137,16 @@ function applyFilters<T>(query: T, f: VehicleFilters): T {
   // NOTE: city is resolved to location_ids by the caller (locations is a left
   // join, so an embedded-column filter wouldn't restrict parent rows here).
   if (f.q) q = q.textSearch("search_tsv", f.q, { type: "websearch" });
+  
+  if (f.status === "sold") {
+    q = q.eq("status", "sold");
+  } else if (f.status === "all") {
+    q = q.in("status", ["available", "reserved", "sold"]);
+  } else {
+    // Default to available only (excluding reserved/sold)
+    q = q.eq("status", "available");
+  }
+
   return q as T;
 }
 
@@ -194,14 +204,13 @@ export async function getVehicleListing(
   }
   const withCity = <T,>(q: T): T => (locationIds ? (q as any).in("location_id", locationIds) : q);
 
-  const base = supabase.from("vehicles").select(CARD_SELECT, { count: "exact" }).in("status", PUBLIC_STATUSES);
+  const base = supabase.from("vehicles").select(CARD_SELECT, { count: "exact" });
   const { data, count } = await applySort(withCity(applyFilters(base, filters)), sort).range(from, to);
 
   // Facets over the same filter set (bounded columns; fine at V1 scale).
   const facetBase = supabase
     .from("vehicles")
-    .select("body_type, fuel_type, transmission, makes:make_id!inner ( name, slug )")
-    .in("status", PUBLIC_STATUSES);
+    .select("body_type, fuel_type, transmission, makes:make_id!inner ( name, slug )");
   const { data: facetRows } = await withCity(applyFilters(facetBase, filters));
   const rows = (facetRows ?? []) as RawRow[];
 
@@ -257,8 +266,7 @@ export const getVehicleCount = async (filters: Pick<VehicleFilters, "make" | "mo
         .select("id, makes:make_id!inner ( slug ), models:model_id!inner ( slug )", {
           count: "exact",
           head: true,
-        })
-        .in("status", PUBLIC_STATUSES);
+        });
       const { count } = (await applyFilters(base, filters)) as { count: number | null };
       return count ?? 0;
     },
