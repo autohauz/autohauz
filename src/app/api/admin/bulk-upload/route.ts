@@ -330,8 +330,6 @@ export async function POST(request: NextRequest) {
         safety_rating: r.safety_rating || null,
         warranty_text: r.warranty_text || null,
         description: r.description || null,
-        status: "draft",
-        published_at: null,
       };
     });
 
