@@ -85,20 +85,30 @@ export default async function ContactPage() {
               {address || hours.length > 0 ? (
                 <div className="rounded-lg border border-border bg-card p-5">
                   {address ? (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 size-5 shrink-0 text-accent-bright" aria-hidden="true" />
-                      <div>
-                        <p className="font-semibold text-foreground">{business.tradingName || site.brandName}</p>
-                        <p className="text-sm text-body">{address}</p>
-                        <a
-                          href={`https://maps.google.com/maps?q=${encodeURIComponent(address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 inline-block text-sm font-semibold text-accent underline-offset-4 hover:underline"
-                        >
-                          Open in Google Maps
-                        </a>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-0.5 size-5 shrink-0 text-accent-bright" aria-hidden="true" />
+                        <div>
+                          <p className="font-semibold text-foreground">{business.tradingName || site.brandName}</p>
+                          <p className="text-sm text-body">{address}</p>
+                          <a
+                            href="https://maps.app.goo.gl/4ADouoQNkHQPd1go7"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-block text-sm font-semibold text-accent underline-offset-4 hover:underline"
+                          >
+                            Open in Google Maps
+                          </a>
+                        </div>
                       </div>
+                      <iframe
+                        title="Location Map"
+                        className="w-full rounded-md shadow-sm border border-border"
+                        style={{ height: '240px' }}
+                        loading="lazy"
+                        allowFullScreen
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                      />
                     </div>
                   ) : null}
                   {hours.length > 0 ? (

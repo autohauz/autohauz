@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
   const staticDate = new Date("2026-01-01T00:00:00Z");
 
-  const [makesRes, modelsRes, vehiclesRes] = await Promise.all([
+  const [makesRes, modelsRes, vehiclesRes, blogArticlesRes, blogCategoriesRes] = await Promise.all([
     supabase.from("makes").select("slug"),
     supabase.from("models").select("slug, makes:make_id ( slug )"),
     supabase
@@ -46,11 +46,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // `sold` is deliberately excluded — see rule 1 above.
       .in("status", ["available", "reserved"])
       .limit(45000),
+    supabase
+      .from("blog_articles")
+      .select("slug, updated_at, status")
+      .eq("status", "published")
+      .limit(1000),
+    supabase
+      .from("blog_categories")
+      .select("slug, created_at"),
   ]);
 
   const vehicles = ((vehiclesRes.data ?? []) as any[]).filter(
     (v) => v.makes?.slug && v.models?.slug,
   );
+  
+  const blogArticles = (blogArticlesRes.data ?? []) as any[];
+  const blogCategories = (blogCategoriesRes.data ?? []) as any[];
 
   // Freshest inventory timestamp — the honest `lastModified` for every hub and
   // landing page, all of which re-render when stock changes.
@@ -85,6 +96,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url("/", latestInventoryDate, 1, "daily"),
     url("/used-cars", latestInventoryDate, 0.9, "daily"),
   ];
+  
+  const blogHubRoute = [url("/blog", staticDate, 0.8, "daily")];
 
   // Programmatic landing pages.
   const makeRoutes = ((makesRes.data ?? []) as any[]).map((m) =>
@@ -98,6 +111,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
   const budgetRoutes = BUDGET_BANDS.map((b) =>
     url(budgetHref(b.max), latestInventoryDate, 0.6, "daily"),
+  );
+
+  // Blog pages
+  const blogCategoryRoutes = blogCategories.map((c) =>
+    url(`/blog/category/${c.slug}`, c.created_at ? new Date(c.created_at) : staticDate, 0.7, "weekly"),
+  );
+  const blogArticleRoutes = blogArticles.map((a) =>
+    url(`/blog/${a.slug}`, a.updated_at ? new Date(a.updated_at) : staticDate, 0.8, "weekly"),
   );
 
   // VDPs — highest-value URLs on the site, with image entries for Google Images.
@@ -132,6 +153,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...modelRoutes,
     ...bodyRoutes,
     ...budgetRoutes,
+    ...blogHubRoute,
+    ...blogCategoryRoutes,
+    ...blogArticleRoutes,
     ...vehicleRoutes,
   ];
 }

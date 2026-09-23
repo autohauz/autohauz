@@ -159,7 +159,7 @@ export function SettingsForms({
       </Card>
 
       <Card title="Lead notifications" description="New leads and the daily reminder digest are emailed to these addresses." action={saveNotificationRecipients}>
-        <L label="Recipient emails (one per line)"><textarea name="emails" rows={4} defaultValue={recipients.join("\n")} className={input} placeholder="sales@example.com.au" /></L>
+        <L label="Recipient emails (one per line)"><textarea name="emails" rows={4} defaultValue={recipients.join("\n")} className={input} placeholder="info@jashire.com.au" /></L>
       </Card>
     </div>
   );

@@ -10,13 +10,13 @@ insert into public.settings (key, value) values
     'legal_name', 'Your Dealership Pty Ltd',
     'trading_name', 'Your Dealership',
     'abn', '',
-    'email', 'sales@example.com',
+    'email', 'info@jashire.com.au',
     'google_rating', 4.9,
     'google_review_count', 0
   )),
   ('phone_numbers', jsonb_build_object(
-    'primary', '',
-    'whatsapp', ''
+    'primary', '+61492962418',
+    'whatsapp', '+61492962418'
   )),
   ('finance_params', jsonb_build_object(
     'annual_rate', 8.99,
@@ -34,7 +34,7 @@ on conflict (key) do nothing;
 -- ── A starter branch/location ───────────────────────────────────────────────
 insert into public.locations (name, slug, address, city, state, postcode, hours, is_active)
 values (
-  'Main Showroom', 'main-showroom', '1 Example St', 'Sydney', 'NSW', '2000',
+  'Main Showroom', 'main-showroom', '14 Harvey Rd', 'Kings Park', 'NSW', '2148',
   jsonb_build_object(
     'mon', '9:00-18:00', 'tue', '9:00-18:00', 'wed', '9:00-18:00',
     'thu', '9:00-18:00', 'fri', '9:00-18:00', 'sat', '9:00-17:00', 'sun', 'closed'

@@ -31,6 +31,7 @@ export type LeadLossReason =
 export type DeviceType = "mobile" | "desktop" | "tablet" | "unknown";
 
 export type TestimonialSource = "google" | "facebook" | "direct";
+export type BlogStatus = "draft" | "scheduled" | "published" | "archived";
 export type StaffRole = "owner" | "admin" | "manager" | "sales" | "content";
 
 // ── Reference entities ──────────────────────────────────────────────────────
@@ -158,6 +159,118 @@ export type Faq = {
   question: string;
   answer: string;
   sortOrder: number;
+};
+
+// ── Blog ────────────────────────────────────────────────────────────────────
+
+export type BlogCategory = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type BlogTag = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type BlogArticleListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  featuredImageUrl: string | null;
+  featuredImageAlt: string | null;
+  status: BlogStatus;
+  readingTimeMinutes: number;
+  publishedAt: string | null;
+  scheduledAt: string | null;
+  authorName: string | null;
+  authorId: string | null;
+  categoryId: string | null;
+  category?: BlogCategory;
+  tags?: BlogTag[];
+  updatedAt: string;
+  createdAt: string;
+};
+
+export type BlogArticle = BlogArticleListItem & {
+  body: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  source: string;
+  topicKey: string | null;
+  primaryKeyword: string | null;
+  socialImageUrl: string | null;
+  canonicalUrl: string | null;
+};
+
+// ── Email Marketing ─────────────────────────────────────────────────────────
+
+export type EmailContact = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  location: string | null;
+  tags: string[];
+  source: string | null;
+  subscriptionStatus: "subscribed" | "unsubscribed" | "bounced" | "complained" | "pending";
+  consentGiven: boolean;
+  consentAt: string | null;
+  lastSentAt: string | null;
+  lastOpenedAt: string | null;
+  lastClickedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmailSegment = {
+  id: string;
+  name: string;
+  description: string | null;
+  filters: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  htmlBody: string;
+  textBody: string | null;
+  previewText: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmailCampaign = {
+  id: string;
+  name: string;
+  subject: string;
+  previewText: string | null;
+  status: "draft" | "scheduled" | "sending" | "sent" | "cancelled" | "failed";
+  templateId: string | null;
+  segmentId: string | null;
+  htmlBody: string | null;
+  textBody: string | null;
+  scheduledAt: string | null;
+  sentAt: string | null;
+  recipientsCount: number;
+  sentCount: number;
+  deliveredCount: number;
+  openedCount: number;
+  clickedCount: number;
+  bouncedCount: number;
+  complainedCount: number;
+  unsubscribedCount: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 

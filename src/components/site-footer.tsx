@@ -98,13 +98,13 @@ export async function SiteFooter() {
               <li>
                 <a href={business.phone ? `tel:${business.phone.replace(/\s+/g, "")}` : "#"} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
                   <Phone className="size-4 text-[#2B8BF6]" />
-                  {business.phone || "1300 004 289"}
+                  {business.phone || "+61492962418"}
                 </a>
               </li>
               <li>
                 <a href={business.email ? `mailto:${business.email}` : "#"} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
                   <Mail className="size-4 text-[#2B8BF6]" />
-                  {business.email || "sales@example.com"}
+                  {business.email || "info@jashire.com.au"}
                 </a>
               </li>
             </ul>
@@ -193,12 +193,23 @@ export async function SiteFooter() {
           {/* Right Column */}
           <div className="flex flex-col border-l border-white/10 pl-8 lg:pl-12 lg:ml-[-1rem]">
             <h2 className="mb-5 text-[15px] font-bold text-white">Our location</h2>
-            <div className="flex flex-col items-center justify-center rounded-lg bg-[#243757]/60 p-8 text-center shadow-inner" style={{ minHeight: '260px' }}>
-              <MapPin className="mb-4 size-7 text-white/80 stroke-[1.5]" />
-              <h3 className="text-[15px] font-semibold text-white">Google Map will be added here</h3>
-              <p className="mt-2 text-[13px] text-white/70">Showroom location and directions</p>
-            </div>
-            <a href={mapQuery ? `https://maps.google.com/maps?q=${mapQuery}` : "#"} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-[46px] w-[200px] items-center justify-center gap-2 rounded-md border border-white/20 bg-transparent text-[14px] font-medium text-white transition-colors hover:bg-white/10">
+            {mapQuery ? (
+              <iframe
+                title="Location Map"
+                className="w-full rounded-lg shadow-inner border-0"
+                style={{ minHeight: '260px' }}
+                loading="lazy"
+                allowFullScreen
+                src={`https://maps.google.com/maps?q=${mapQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-lg bg-[#243757]/60 p-8 text-center shadow-inner" style={{ minHeight: '260px' }}>
+                <MapPin className="mb-4 size-7 text-white/80 stroke-[1.5]" />
+                <h3 className="text-[15px] font-semibold text-white">Location Map</h3>
+                <p className="mt-2 text-[13px] text-white/70">Showroom location and directions</p>
+              </div>
+            )}
+            <a href="https://maps.app.goo.gl/4ADouoQNkHQPd1go7" target="_blank" rel="noopener noreferrer" className="mt-4 flex h-[46px] w-[200px] items-center justify-center gap-2 rounded-md border border-white/20 bg-transparent text-[14px] font-medium text-white transition-colors hover:bg-white/10">
               <MapPin className="size-4" />
               Get Directions <ExternalLink className="size-4" />
             </a>
