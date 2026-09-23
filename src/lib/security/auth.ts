@@ -23,13 +23,14 @@ type SupabaseUser = {
  * a retry is the correct outcome, not a bypass.
  */
 export const getCurrentUser = cache(async function getCurrentUser() {
-  return {
-    id: "00000000-0000-0000-0000-000000000000",
-    email: "admin@example.com",
-    app_metadata: { platform_role: "admin" },
-    user_metadata: { full_name: "Admin User" },
-    factors: []
-  };
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
 });
 
 export async function requireUser() {
