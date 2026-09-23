@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // --- Arbitraries for component props ---
@@ -65,13 +64,15 @@ const cardPropsArb = fc.record({
 
 const badgeVariantArb = fc.constantFrom(
   "default",
+  "neutral",
   "success",
   "warning",
-  "destructive",
+  "danger",
   "info",
-  "outline"
+  "outline",
+  "solid"
 ) as fc.Arbitrary<
-  "default" | "success" | "warning" | "destructive" | "info" | "outline"
+  "default" | "neutral" | "success" | "warning" | "danger" | "info" | "outline" | "solid"
 >;
 
 const badgePropsArb = fc.record({
@@ -92,23 +93,6 @@ const inputPropsArb = fc.record({
   type: inputTypeArb,
   disabled: fc.boolean(),
   placeholder: fc.string({ minLength: 0, maxLength: 30 }),
-});
-
-const sectionVariantArb = fc.constantFrom(
-  "default",
-  "muted",
-  "navy",
-  "gradient"
-) as fc.Arbitrary<"default" | "muted" | "navy" | "gradient">;
-
-const sectionSizeArb = fc.constantFrom("sm", "md", "lg") as fc.Arbitrary<
-  "sm" | "md" | "lg"
->;
-
-const sectionPropsArb = fc.record({
-  variant: sectionVariantArb,
-  size: sectionSizeArb,
-  container: fc.boolean(),
 });
 
 const skeletonVariantArb = fc.constantFrom(
@@ -180,23 +164,6 @@ describe("Property 1: UI Primitive Rendering Resilience", () => {
     );
   });
 
-  it("Section renders without error for any valid prop combination", () => {
-    fc.assert(
-      fc.property(sectionPropsArb, (props) => {
-        const { container } = render(
-          <Section
-            variant={props.variant}
-            size={props.size}
-            container={props.container}
-          >
-            <div>Section content</div>
-          </Section>
-        );
-        expect(container.children.length).toBeGreaterThanOrEqual(1);
-      }),
-      PBT_CONFIG
-    );
-  });
 
   it("Skeleton renders without error for any valid prop combination", () => {
     fc.assert(

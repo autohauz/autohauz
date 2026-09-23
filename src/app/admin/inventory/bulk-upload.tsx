@@ -93,7 +93,7 @@ export function BulkUpload() {
           onClick={() => setIsOpen(true)}
           className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted transition-colors"
         >
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+          <FileSpreadsheet className="h-4 w-4 text-success" />
           Bulk Upload
         </button>
       </div>
@@ -110,14 +110,14 @@ export function BulkUpload() {
       </button>
 
       <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100/50 shrink-0">
-          <FileSpreadsheet className="h-6 w-6 text-emerald-600" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success-soft shrink-0">
+          <FileSpreadsheet className="h-6 w-6 text-success" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-bold text-foreground">Bulk Upload Vehicles</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Upload your inventory spreadsheet. We support CSV and Excel formats. Ensure your columns match: Make, Model, Year, Price, etc.{" "}
-            <a href="/templates/vehicle-upload-template.csv" download className="text-emerald-600 font-semibold hover:underline">
+            <a href="/templates/vehicle-upload-template.csv" download className="text-success font-semibold hover:underline">
               Download the template here.
             </a>
           </p>
@@ -130,23 +130,23 @@ export function BulkUpload() {
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <UploadCloud className="w-8 h-8 mb-3 text-muted-foreground" />
                     <p className="mb-2 text-sm text-muted-foreground">
-                      <span className="font-semibold text-emerald-600">Click to upload</span> or drag and drop
+                      <span className="font-semibold text-success">Click to upload</span> or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground">CSV, XLSX, or XLS up to {MAX_UPLOAD_SIZE_MB} MB</p>
                   </div>
                   <input type="file" className="hidden" accept={ACCEPTED_UPLOAD_TYPES} onChange={handleFileChange} required />
                 </label>
               </div>
-              {file && <p className="text-sm font-medium text-emerald-600 mt-1 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" /> {file.name} selected</p>}
+              {file && <p className="text-sm font-medium text-success mt-1 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" /> {file.name} selected</p>}
             </div>
 
             {result?.success !== undefined && (
-              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 flex gap-3 text-emerald-700">
+              <div className="rounded-lg bg-success-soft border border-success/20 p-4 flex gap-3 text-success">
                 <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium">Successfully imported {result.success} vehicle{result.success !== 1 ? "s" : ""}!</p>
                   {result.skipped != null && result.skipped > 0 && (
-                    <p className="mt-1 text-emerald-600/80">
+                    <p className="mt-1 text-success">
                       {result.skipped} row{result.skipped !== 1 ? "s were" : " was"} skipped (missing required fields like Make, Model, or Price).
                     </p>
                   )}

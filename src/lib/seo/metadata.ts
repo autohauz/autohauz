@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { absoluteUrl, canonical } from "@/lib/seo/site";
+import { site } from "@/config/site";
+import { seo } from "@/config/seo";
 
 /**
  * Builds a complete, self-consistent metadata block for a page.
@@ -11,8 +13,8 @@ import { absoluteUrl, canonical } from "@/lib/seo/site";
  * homepage. Routing all pages through one builder makes the canonical, the OG
  * URL and the Twitter card agree by construction.
  *
- * Australian defaults (`en_AU` locale, "Cars365 Australia" site name) are baked
- * in so no caller has to remember them.
+ * Australian defaults (`en_AU` locale, the configured brand name) are baked in
+ * so no caller has to remember them.
  */
 export function pageMetadata(input: {
   /** Clean, query-free path this page canonicalises to. */
@@ -26,7 +28,7 @@ export function pageMetadata(input: {
   keywords?: string[];
 }): Metadata {
   const url = absoluteUrl(input.path);
-  const image = input.image || "/og-image.jpg";
+  const image = input.image || seo.ogImage;
 
   return {
     title: input.title,
@@ -34,12 +36,12 @@ export function pageMetadata(input: {
     ...(input.keywords?.length ? { keywords: input.keywords } : {}),
     alternates: canonical(input.path),
     ...(input.noindex
-      ? { robots: { index: true, follow: true, googleBot: { index: true, follow: true } } }
+      ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
       : { robots: { index: true, follow: true } }),
     openGraph: {
       type: "website",
-      locale: "en_AU",
-      siteName: "Cars365 Australia",
+      locale: site.ogLocale,
+      siteName: site.brandName,
       url,
       title: input.title,
       description: input.description,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useTransition, useEffect } from "react";
-import { UserPlus, CheckCircle, AlertCircle, Shield, ShieldOff, ShieldCheck, Loader2 } from "lucide-react";
+import { UserPlus, Shield, ShieldOff, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,19 +12,19 @@ import { assignAdminRole, revokeAdminRole, restoreAdminRole } from "./actions";
 import type { AdminRoleEntry, RoleActionState } from "./actions";
 
 const ROLE_OPTIONS = [
-  { value: "sales", label: "Sales", description: "Work leads (view, update, assign to self) & quick-change vehicle status", color: "bg-blue-100 text-blue-700 border-blue-200" },
-
-  { value: "manager", label: "Manager", description: "Inventory, leads, content & reports (no users/settings)", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "admin", label: "Admin", description: "Full admin access except owner-only actions", color: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "owner", label: "Owner", description: "Full control including users, settings & hard delete", color: "bg-red-100 text-red-700 border-red-200" },
+  { value: "sales", label: "Sales", description: "Work leads (view, update, assign to self) & quick-change vehicle status", color: "bg-info-soft text-info border-info/20" },
+  { value: "content", label: "Content", description: "Manage FAQs & testimonials only", color: "bg-accent-soft text-accent border-accent/20" },
+  { value: "manager", label: "Manager", description: "Inventory, leads, content & reports (no users/settings)", color: "bg-success-soft text-success border-success/20" },
+  { value: "admin", label: "Admin", description: "Full admin access except owner-only actions", color: "bg-warning-soft text-warning border-warning/20" },
+  { value: "owner", label: "Owner", description: "Full control including users, settings & hard delete", color: "bg-danger-soft text-danger border-danger/20" },
 ];
 
-const ROLE_BADGE_COLORS: Record<string, string> = {
-  owner: "bg-red-100 text-red-700 border-red-200",
-  admin: "bg-amber-100 text-amber-700 border-amber-200",
-  manager: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  sales: "bg-blue-100 text-blue-700 border-blue-200",
-  content: "bg-purple-100 text-purple-700 border-purple-200",
+const ROLE_COLORS: Record<string, string> = {
+  owner: "bg-danger-soft text-danger border-danger/20",
+  admin: "bg-warning-soft text-warning border-warning/20",
+  manager: "bg-success-soft text-success border-success/20",
+  sales: "bg-info-soft text-info border-info/20",
+  content: "bg-accent-soft text-accent border-accent/20",
 };
 
 const initialAssignState: RoleActionState = { status: "idle", message: "" };
@@ -41,7 +41,7 @@ function AssignRoleForm() {
   }, [state]);
 
   return (
-    <Card variant="elevated" className="border-2 border-dashed border-primary/20 bg-gradient-to-br from-orange-50/40 to-amber-50/20">
+    <Card variant="elevated" className="border border-border bg-card">
       <CardHeader className="border-b border-border/50 pb-4">
         <CardTitle className="flex items-center gap-2 text-lg">
           <UserPlus className="h-5 w-5 text-primary" />
@@ -51,7 +51,7 @@ function AssignRoleForm() {
       <CardContent className="p-6">
         <form action={action} className="grid gap-5">
           <div className="grid gap-2">
-            <Label htmlFor="assign-email">User email address <span className="text-red-500">*</span></Label>
+            <Label htmlFor="assign-email">User email address <span className="text-danger">*</span></Label>
             <Input
               id="assign-email"
               name="email"
@@ -64,7 +64,7 @@ function AssignRoleForm() {
           </div>
 
           <div className="grid gap-3">
-            <Label>Role <span className="text-red-500">*</span></Label>
+            <Label>Role <span className="text-danger">*</span></Label>
             <div className="grid gap-2">
               {ROLE_OPTIONS.map((opt) => (
                 <label
@@ -128,7 +128,7 @@ function AssignRoleForm() {
 
 function RoleRow({ entry }: { entry: AdminRoleEntry }) {
   const [isPending, startTransition] = useTransition();
-  const badgeColor = ROLE_BADGE_COLORS[entry.role] ?? "bg-muted text-muted-foreground border-border";
+  const badgeColor = ROLE_COLORS[entry.role] ?? "bg-muted text-muted-foreground border-border";
 
   const handleRevoke = () => {
     startTransition(async () => {
@@ -162,7 +162,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-          entry.active ? "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-sm" : "bg-slate-200 text-muted-foreground"
+          entry.active ? "bg-success-soft text-success shadow-sm" : "bg-muted text-muted-foreground"
         }`}>
           {(entry.fullName || entry.email).charAt(0).toUpperCase()}
         </div>
@@ -173,7 +173,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
           {entry.fullName && (
             <div className="text-xs text-muted-foreground truncate">{entry.email}</div>
           )}
-          <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">
+          <div className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">
             Granted {new Date(entry.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
           </div>
         </div>
@@ -184,7 +184,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
           {entry.role}
         </span>
         {entry.mfaRequired && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-muted text-slate-600 border-border flex items-center gap-1">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-muted text-foreground border-border flex items-center gap-1">
             <ShieldCheck className="h-3 w-3" /> MFA
           </span>
         )}
@@ -197,7 +197,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
           <button
             onClick={handleRevoke}
             disabled={isPending}
-            className="ml-1 flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-red-200 transition-all disabled:opacity-50"
+            className="ml-1 flex items-center gap-1.5 text-xs font-semibold text-danger hover:text-danger hover:bg-danger-soft px-3 py-1.5 rounded-xl border border-transparent transition-all disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldOff className="h-3.5 w-3.5" />}
             Revoke
@@ -206,7 +206,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
           <button
             onClick={handleRestore}
             disabled={isPending}
-            className="ml-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-emerald-200 transition-all disabled:opacity-50"
+            className="ml-1 flex items-center gap-1.5 text-xs font-semibold text-success hover:text-success hover:bg-success-soft px-3 py-1.5 rounded-xl border border-transparent transition-all disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
             Restore

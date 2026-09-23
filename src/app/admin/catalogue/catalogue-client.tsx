@@ -12,7 +12,7 @@ const btnDanger = "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs f
 
 // ── Add Make Form ────────────────────────────────────────────────────────────
 export function AddMakeForm() {
-  const [state, action, pending] = useActionState(createMake, undefined);
+  const [, action, pending] = useActionState(createMake, undefined);
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <div className="flex-1 min-w-[180px]">
@@ -73,7 +73,7 @@ export function DeleteMakeButton({ id, name }: { id: string; name: string }) {
 // ── Make Row (expandable) ─────────────────────────────────────────────────────
 export function MakeRow({ make, models }: { make: Make; models: Model[] }) {
   const [open, setOpen] = useState(false);
-  const [addState, addAction, addPending] = useActionState(createModel, undefined);
+  const [, addAction, addPending] = useActionState(createModel, undefined);
   const myModels = models.filter((m) => m.makeId === make.id);
 
   return (

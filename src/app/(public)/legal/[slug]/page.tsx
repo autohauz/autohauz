@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { Container, PageHeader } from "@/components/ui/container";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getBusinessProfile } from "@/lib/data/business";
+import { site } from "@/config/site";
 
 type PolicySection = {
   heading: string;
@@ -17,16 +20,28 @@ type Policy = {
 
 const updatedAt = "14 July 2026";
 
+/**
+ * DRAFT — these documents were adapted from a template and have not been
+ * reviewed by an Australian solicitor for this business. The entity name is
+ * substituted from Admin → Settings at render time; jurisdiction wording is
+ * deliberately generic until the trading state is confirmed (OPEN_DECISIONS D-15).
+ */
+const DRAFT_NOTICE = "Draft — this document is pending review by an Australian solicitor and may change.";
+
+function fill(text: string, entity: string): string {
+  return text.split("{{ENTITY}}").join(entity);
+}
+
 const policies: Record<string, Policy> = {
   terms: {
     title: "Terms of Service",
     summary:
-      "These terms govern your use of the Cars365 website, where we advertise quality used vehicles for sale and invite you to enquire about them. By accessing our website, you agree to these terms.",
+      "These terms govern your use of the {{ENTITY}} website, where we advertise quality used vehicles for sale and invite you to enquire about them. By accessing our website, you agree to these terms.",
     sections: [
       {
-        heading: "About Cars365",
+        heading: "About {{ENTITY}}",
         body: [
-          "Cars365 is a licensed used-vehicle dealership operating in New South Wales. We list vehicles we hold or can source for sale, publish their details and pricing, and provide ways for you to contact us with an enquiry, finance request, trade-in request, or inspection booking.",
+          "{{ENTITY}} is a licensed used-vehicle dealer operating in Australia. We list vehicles we hold or can source for sale, publish their details and pricing, and provide ways for you to contact us with an enquiry, finance request, trade-in request, or inspection booking.",
           "The website is an advertisement and an invitation to treat. It is not an offer capable of legally binding acceptance, and submitting an enquiry does not create a contract of sale. A binding contract of sale is formed only when both parties sign a written Motor Vehicle Dealer's Contract of Sale.",
         ],
       },
@@ -35,7 +50,7 @@ const policies: Record<string, Policy> = {
         body: [
           "We take reasonable care to describe each vehicle accurately, including make, model, year, odometer reading, body type, fuel, transmission, and features. However, details may occasionally contain errors or become out of date, and a vehicle may sell before a listing is removed.",
           "Advertised prices are in Australian Dollars (AUD) and exclude government statutory charges such as stamp duty, registration, and transfer fees, unless explicitly advertised as 'Drive Away'. We reserve the right to correct pricing or availability errors at any time before a contract of sale is executed.",
-          "Any holding deposit placed on a vehicle is subject to a separate written agreement and may be fully or partially refundable in accordance with the Motor Dealers and Repairers Act 2013 (NSW)."
+          "Any holding deposit placed on a vehicle is subject to a separate written agreement and may be fully or partially refundable in accordance with the motor dealer legislation of the state or territory in which {{ENTITY}} is licensed."
         ],
       },
       {
@@ -49,7 +64,7 @@ const policies: Record<string, Policy> = {
         heading: "Australian Consumer Law and Statutory Warranties",
         body: [
           "Nothing in these terms excludes, restricts, or modifies any consumer guarantee, right, or remedy that cannot lawfully be excluded under the Australian Consumer Law (ACL).",
-          "Where we sell a vehicle to you, statutory guarantees under the ACL apply. Furthermore, eligible vehicles are sold with a statutory dealer guarantee (Form 5) as prescribed by the Motor Dealers and Repairers Act 2013 (NSW).",
+          "Where we sell a vehicle to you, statutory guarantees under the ACL apply. Furthermore, eligible vehicles are sold with any statutory dealer guarantee prescribed by the motor dealer legislation of the state or territory in which {{ENTITY}} is licensed.",
         ],
       },
       {
@@ -62,7 +77,7 @@ const policies: Record<string, Policy> = {
         heading: "Limitation of liability and jurisdiction",
         body: [
           "To the maximum extent permitted by law, our liability for your use of the website is limited to resupplying the affected service. We are not liable for indirect, incidental, or consequential damages arising out of your use of the website.",
-          "These Terms of Service are governed by the laws in force in New South Wales, Australia. You submit to the non-exclusive jurisdiction of the courts of New South Wales.",
+          "These Terms of Service are governed by the laws in force in the Australian state or territory in which {{ENTITY}} is licensed to trade, and you submit to the non-exclusive jurisdiction of its courts.",
         ],
       },
       {
@@ -76,7 +91,7 @@ const policies: Record<string, Policy> = {
   "privacy-policy": {
     title: "Privacy Policy",
     summary:
-      "This policy explains how Cars365 collects, uses, discloses, stores, and protects your personal information in accordance with the Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs).",
+      "This policy explains how {{ENTITY}} collects, uses, discloses, stores, and protects your personal information in accordance with the Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs).",
     sections: [
       {
         heading: "Personal information we collect",
@@ -125,13 +140,13 @@ const policies: Record<string, Policy> = {
   disclaimer: {
     title: "Website Disclaimer",
     summary:
-      "This disclaimer outlines the terms of relying on the vehicle information and financial estimates published on the Cars365 website.",
+      "This disclaimer outlines the terms of relying on the vehicle information and financial estimates published on the {{ENTITY}} website.",
     sections: [
       {
         heading: "Accuracy of vehicle listings",
         body: [
           "Vehicle listings are provided in good faith to help you decide whether to enquire. While we aim to keep details accurate and current, specifications, features, condition, pricing, and availability can change without notice. A vehicle may be sold before its listing is updated.",
-          "We guarantee clear title (no money owing and not written-off) for all vehicles sold as per our obligations under NSW law. However, before committing to buy, you should confirm the vehicle's price, on-road costs, condition, service history, and any warranty directly with our sales team and, where relevant, arrange your own independent mechanical inspection.",
+          "We guarantee clear title (no money owing and not written-off) for all vehicles sold, as required by the motor dealer legislation of the state or territory in which {{ENTITY}} is licensed. However, before committing to buy, you should confirm the vehicle's price, on-road costs, condition, service history, and any warranty directly with our sales team and, where relevant, arrange your own independent mechanical inspection.",
         ],
       },
       {
@@ -144,7 +159,7 @@ const policies: Record<string, Policy> = {
       {
         heading: "Consumer rights preserved",
         body: [
-          "This disclaimer does not exclude, restrict, or modify any rights you have under the Australian Consumer Law (ACL) or the Motor Dealers and Repairers Act 2013 (NSW). Where we supply a vehicle to you, we remain fully responsible for the statutory obligations and guarantees that apply to that sale.",
+          "This disclaimer does not exclude, restrict, or modify any rights you have under the Australian Consumer Law (ACL) or the motor dealer legislation of the state or territory in which {{ENTITY}} is licensed. Where we supply a vehicle to you, we remain fully responsible for the statutory obligations and guarantees that apply to that sale.",
         ],
       },
     ],
@@ -170,7 +185,7 @@ export async function generateMetadata({
   return pageMetadata({
     path: `/legal/${slug}`,
     title: policy.title,
-    description: policy.summary,
+    description: fill(policy.summary, site.brandName),
   });
 }
 
@@ -186,37 +201,46 @@ export default async function LegalPage({
     notFound();
   }
 
-  return (
-    <div className="min-h-screen bg-muted">
-      <SiteHeader />
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-amber-600">
-          Last updated {updatedAt}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-950">{policy.title}</h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">{policy.summary}</p>
+  const business = await getBusinessProfile();
+  const entity = business.legalName || business.tradingName || site.brandName;
 
-        <div className="mt-8 space-y-5">
-          {policy.sections.map((section) => (
-            <section key={section.heading} className="rounded-lg border border-border bg-card p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-950">{section.heading}</h2>
-              <div className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
-                {section.body.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-                {section.bullets && (
-                  <ul className="list-disc space-y-2 pl-5">
-                    {section.bullets.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
+  return (
+    <>
+      <SiteHeader />
+      <main id="main" className="py-8 lg:py-12">
+        <Container width="prose">
+          <p role="note" className="rounded-md bg-warning-soft px-4 py-3 text-sm text-warning">
+            {DRAFT_NOTICE}
+          </p>
+          <PageHeader
+            className="mt-8"
+            above={<p className="mb-2 text-sm text-muted-foreground">Last updated {updatedAt}</p>}
+            title={policy.title}
+            description={fill(policy.summary, entity)}
+          />
+
+          <div className="mt-10 space-y-10">
+            {policy.sections.map((section) => (
+              <section key={section.heading}>
+                <h2 className="text-xl">{fill(section.heading, entity)}</h2>
+                <div className="mt-3 space-y-3 leading-relaxed text-body">
+                  {section.body.map((paragraph) => (
+                    <p key={paragraph}>{fill(paragraph, entity)}</p>
+                  ))}
+                  {section.bullets ? (
+                    <ul className="list-disc space-y-2 pl-5">
+                      {section.bullets.map((item) => (
+                        <li key={item}>{fill(item, entity)}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Container>
       </main>
       <SiteFooter />
-    </div>
+    </>
   );
 }

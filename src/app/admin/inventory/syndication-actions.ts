@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidateTag, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { updateTags } from "@/lib/cache";
 import { requireAdmin } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDefaultDealerId, getSyndicationVehicle } from "@/lib/data/syndication";
@@ -23,9 +24,6 @@ import type { ReadinessResult } from "@/lib/syndication/readiness";
 
 type ActionResult = { ok: true; readiness: ReadinessResult } | { error: string };
 
-// Next 16 widened revalidateTag's signature with a cache-profile argument.
-// Same cast the existing inventory actions use, so both files stay consistent.
-const revalidate = revalidateTag as (tag: string) => void;
 
 /** Coerce empty-string optionals to null before the DB write. */
 function clean<T extends Record<string, any>>(obj: T): T {
@@ -115,7 +113,7 @@ export async function saveSyndicationExtra(_prev: unknown, formData: FormData): 
     })
     .then(() => { /* no-op */ });
 
-  revalidate("vehicles");
+  updateTags("vehicles");
   revalidatePath("/admin/inventory");
   revalidatePath(`/admin/inventory/${d.vehicleId}`);
 

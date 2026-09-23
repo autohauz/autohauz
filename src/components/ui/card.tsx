@@ -7,11 +7,15 @@ interface CardProps extends React.ComponentProps<"div"> {
   variant?: "default" | "elevated" | "interactive"
 }
 
+/*
+ * DESIGN.md §5: resting cards are a 1 px border + the card shadow; elevated
+ * cards (menus, floating panels) use the float shadow; interactive cards signal
+ * hover with an accent border — never a lift.
+ */
 const cardVariantStyles: Record<NonNullable<CardProps["variant"]>, string> = {
-  default: "ring-1 ring-foreground/10",
-  elevated: "shadow-md ring-0",
-  interactive:
-    "shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer",
+  default: "border border-border shadow-card",
+  elevated: "border border-border shadow-float",
+  interactive: "border border-border shadow-card transition-colors duration-150 hover:border-accent-bright focus-within:border-accent-bright",
 }
 
 function Card({
@@ -25,7 +29,7 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card flex flex-col gap-4 overflow-hidden rounded-lg bg-card py-4 text-sm text-card-foreground has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-lg *:[img:last-child]:rounded-b-lg",
         cardVariantStyles[variant],
         className
       )}
@@ -39,7 +43,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-4 group-data-[size=sm]/card:px-3 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
+        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-lg px-4 group-data-[size=sm]/card:px-3 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
         className
       )}
       {...props}
@@ -52,7 +56,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "text-base font-semibold leading-snug text-foreground group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}
@@ -98,7 +102,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-4 group-data-[size=sm]/card:p-3",
+        "flex items-center rounded-b-lg border-t border-border bg-muted p-4 group-data-[size=sm]/card:p-3",
         className
       )}
       {...props}

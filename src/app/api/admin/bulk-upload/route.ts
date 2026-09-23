@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { revalidateTag as _revalidateTag } from "next/cache";
-const revalidateTag = _revalidateTag as (tag: string) => void;
+import { revalidateTags } from "@/lib/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireApiAdmin } from "@/lib/security/auth";
 import * as xlsx from "xlsx";
 import { vehicleCsvRowSchema } from "@/lib/validation/vehicle";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Allow up to 10MB on this API route. Vercel Serverless limits apply per-plan,
-// but an API route bypasses the Server Action 4.5MB middleware restriction.
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+// Spreadsheets of a few thousand rows are well under 1 MB; the cap guards the
+// parser (SheetJS) against pathological uploads. Vercel additionally limits
+// request bodies to 4.5 MB on every plan.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -108,41 +109,18 @@ function parseDateToIso(dateStr: string | undefined): string | undefined {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate — must be a logged-in admin
-    const cookieStore = await cookies();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+    // Same admin policy as every other admin surface (allowlist OR platform
+    // role OR active admin_roles row) — previously re-implemented inline here
+    // and silently ignored two of the three paths.
+    const { user, response: denied } = await requireApiAdmin();
+    if (!user) return denied;
 
-    const supabaseAuth = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
-        },
-      },
-    });
-
-    const { data: { user } } = await supabaseAuth.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const declaredLength = Number(request.headers.get("content-length") ?? 0);
+    if (declaredLength > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ success: false, error: "File too large (max 4 MB)." }, { status: 413 });
     }
 
-    // Verify admin role
     const supabaseAdmin = createAdminClient();
-    const { data: roleData } = await supabaseAdmin
-      .from("admin_roles")
-      .select("role, active")
-      .eq("user_id", user.id)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (!roleData) {
-      return NextResponse.json({ success: false, error: "Forbidden: Admin role required" }, { status: 403 });
-    }
 
     // Parse multipart form data
     const formData = await request.formData();
@@ -153,6 +131,9 @@ export async function POST(request: NextRequest) {
     }
 
     const file = fileValue;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ success: false, error: "File too large (max 4 MB)." }, { status: 413 });
+    }
     const extension = file.name.split(".").pop()?.toLowerCase();
 
     if (!extension || !["csv", "xlsx", "xls"].includes(extension)) {
@@ -357,8 +338,7 @@ export async function POST(request: NextRequest) {
       })
       .then(() => {});
 
-    revalidateTag("vehicles");
-    revalidateTag("public");
+    revalidateTags("vehicles", "public");
     
     return NextResponse.json({ success: true, count: inserts.length, skipped: skippedRows.length });
   } catch (err) {

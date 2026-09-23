@@ -1,27 +1,22 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import { Users, MessageCircle, BadgeDollarSign } from "lucide-react";
 import { StaffSignIn } from "@/components/auth/staff-sign-in";
+import { site } from "@/config/site";
 
 function SignInContent() {
-  const searchParams = useSearchParams();
-  const redirectedFrom = searchParams.get("redirectedFrom");
-  const plan = searchParams.get("plan");
-  const mfaRequired = searchParams.get("reason") === "mfa-required";
-
   return (
-    <main className="flex min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/20">
+    <main className="dark flex min-h-screen bg-background">
       {/* Value Proposition Panel — Desktop only (≥1024px) */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 bg-gradient-to-br from-primary/5 via-background to-accent/10">
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 border-r border-border">
         <div className="max-w-md space-y-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground" style={{ letterSpacing: "-0.03em" }}>
-              Australia&apos;s trusted used car dealership
+              {site.brandName} staff sign-in
             </h2>
             <p className="mt-3 text-lg text-muted-foreground">
-              Browse premium, pre-inspected used cars with transparent pricing.
+              Manage inventory, respond to leads and issue invoices.
             </p>
           </div>
 
@@ -76,9 +71,7 @@ function SignInContent() {
 export default function SignInPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/20" />
-      }
+      fallback={<div className="dark min-h-screen bg-background" />}
     >
       <SignInContent />
     </Suspense>

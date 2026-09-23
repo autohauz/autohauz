@@ -2,10 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { VehicleForm } from "@/components/admin/vehicle-form";
-import { SyndicationPanel } from "@/components/admin/syndication-panel";
 import { updateVehicle } from "@/app/admin/inventory/actions";
-import { getSyndicationVehicle } from "@/lib/data/syndication";
-import { evaluateReadiness, type ReadinessResult } from "@/lib/syndication/readiness";
 import { getMakes, getAllModels, getAllFeatures } from "@/lib/data/inventory";
 import { getActiveLocations } from "@/lib/data/locations";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -30,7 +27,6 @@ export default async function EditVehiclePage({
     { data: vehicle },
     { data: featureRows },
     { data: imageRows },
-    { data: syndicationExtra },
     makes, models, features, locations,
   ] = await Promise.all([
     supabase.from("vehicles").select("*, makes:make_id(slug), models:model_id(slug)").eq("id", id).maybeSingle(),
@@ -40,36 +36,11 @@ export default async function EditVehiclePage({
       .select("is_cover, sort_order, media:media_id(storage_key)")
       .eq("vehicle_id", id)
       .order("sort_order", { ascending: true }),
-    supabase.from("syndication_vehicle_extra").select("*").eq("vehicle_id", id).maybeSingle(),
     getMakes(), getAllModels(), getAllFeatures(), getActiveLocations(),
   ]);
   if (!vehicle) notFound();
 
-  // Readiness is computed from the canonical projection, using the identical
-  // function the sync engine will call at publish time (architecture.md §5).
-  //
-  // Wrapped: the projection throws on a query error (deliberately — a silent
-  // empty result is how a truncated feed happens), and it does not exist at all
-  // until migration 0014 is applied. Neither may take down the vehicle editor:
-  // the website must never break because of syndication work.
-  let readiness: ReadinessResult | null = null;
-  try {
-    const canonical = await getSyndicationVehicle(id);
-    if (canonical) readiness = evaluateReadiness(canonical);
-  } catch {
-    readiness = null;
-  }
-
   // Build public URLs for each image using the storage key.
-  // PostgREST can return a to-one embed (`media:media_id(...)`) as either a
-  // single object OR a one-element array depending on client/version — normalise
-  // both so images don't silently vanish when the shape differs (e.g. in prod).
-  //
-  // NOTE: We use createAdminClient() — NOT createServerClient() — because
-  // getPublicUrl() is a pure URL-construction helper: no auth, no network call,
-  // no cookies. createServerClient() calls `await cookies()` internally, which
-  // is tied to the active HTTP request context and THROWS when Next.js
-  // re-renders this page after a Server Action calls revalidateTag("vehicles").
   const storageClient = createAdminClient();
   const images = (imageRows ?? [])
     .map((row) => {
@@ -105,9 +76,7 @@ export default async function EditVehiclePage({
         ) : null}
       </div>
       <VehicleForm key={id} action={updateVehicle} makes={makes} models={models} features={features} locations={locations} vehicle={v} selectedFeatureIds={selectedFeatureIds} mode="edit" />
-      {readiness ? (
-        <SyndicationPanel vehicleId={id} extra={syndicationExtra} readiness={readiness} />
-      ) : null}
     </div>
   );
 }
+

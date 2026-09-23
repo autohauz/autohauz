@@ -60,15 +60,13 @@ export function FavoriteButton({
       type="button"
       onClick={toggle}
       aria-pressed={active}
-      aria-label={active ? "Remove from saved" : "Save this car"}
+      aria-label={label ? (active ? `Remove ${label.replace(/^Save /, "")} from saved` : label) : active ? "Remove from saved" : "Save this car"}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-full transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "inline-flex size-10 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-card backdrop-blur-[2px] transition-colors duration-150 hover:bg-card",
         className,
       )}
     >
-      <Heart className={cn("size-5 transition-all", active ? "scale-110 fill-danger stroke-danger" : "stroke-current")} />
-      {label ? <span className="text-sm font-medium">{label}</span> : null}
+      <Heart className={cn("size-5", active ? "fill-danger stroke-danger" : "stroke-current")} aria-hidden="true" />
     </button>
   );
 }

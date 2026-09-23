@@ -3,12 +3,17 @@
 import { useState, useMemo, useCallback } from "react";
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  TableScroll, Table, TableHeader, TableRow, 
+  TableHead, TableBody, TableCell, TableMessage 
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 export interface DataTableColumn<T> {
   key: keyof T & string;
   label: string;
   sortable?: boolean;
+  numeric?: boolean;
   render?: (value: T[keyof T], row: T) => React.ReactNode;
 }
 
@@ -84,16 +89,16 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   return (
-    <div className={cn("w-full overflow-hidden rounded-lg border border-border bg-background", className)}>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-foreground">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
+    <div className={cn("flex flex-col gap-4", className)}>
+      <TableScroll>
+        <Table>
+          <TableHeader>
+            <TableRow>
               {columns.map((col) => (
-                <th
+                <TableHead
                   key={col.key}
+                  numeric={col.numeric}
                   className={cn(
-                    "px-4 py-3 text-left font-semibold text-foreground",
                     col.sortable && "cursor-pointer select-none hover:bg-muted/80 transition-colors"
                   )}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
@@ -105,7 +110,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       : undefined
                   }
                 >
-                  <span className="inline-flex items-center gap-1">
+                  <span className={cn("inline-flex items-center gap-1", col.numeric && "flex-row-reverse")}>
                     {col.label}
                     {col.sortable && (
                       <span className="inline-flex flex-col" aria-hidden="true">
@@ -128,45 +133,34 @@ export function DataTable<T extends Record<string, unknown>>({
                       </span>
                     )}
                   </span>
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginatedData.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
-                  No data available
-                </td>
-              </tr>
+              <TableMessage colSpan={columns.length}>
+                No data available
+              </TableMessage>
             ) : (
               paginatedData.map((row, rowIndex) => (
-                <tr
-                  key={rowIndex}
-                  className={cn(
-                    "border-b border-border last:border-b-0 transition-colors hover:bg-muted/30",
-                    rowIndex % 2 === 0 ? "bg-background" : "bg-muted/50"
-                  )}
-                >
+                <TableRow key={rowIndex}>
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3">
+                    <TableCell key={col.key} numeric={col.numeric}>
                       {col.render
                         ? col.render(row[col.key], row)
                         : String(row[col.key] ?? "")}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableScroll>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between border-t border-border px-4 py-3">
+      <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
             Showing {sortedData.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1}–
@@ -191,19 +185,21 @@ export function DataTable<T extends Record<string, unknown>>({
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon"
+            className="size-8"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={safeCurrentPage <= 1}
             aria-label="Previous page"
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="px-3 text-sm text-foreground">
+          <span className="px-3 text-sm font-medium text-foreground tabular-nums">
             {safeCurrentPage} / {totalPages}
           </span>
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon"
+            className="size-8"
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={safeCurrentPage >= totalPages}
             aria-label="Next page"

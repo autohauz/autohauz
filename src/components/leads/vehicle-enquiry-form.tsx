@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Field, TextInput, TextArea, Honeypot, TurnstileField,
-  SubmitButton, LeadSuccess, PRIVACY_MICROCOPY,
-} from "@/components/leads/lead-form-kit";
+import { Field, TextInput, TextArea, Honeypot, TurnstileField, SubmitButton, LeadSuccess, FormError, PRIVACY_MICROCOPY, PHONE_PATTERN } from "@/components/leads/lead-form-kit";
 import { submitLead } from "@/lib/leads/submit";
 
-/** VDP quick enquiry (SRS FR-8): name, phone, message pre-filled with the car. */
+/** VDP quick enquiry: name, phone, message pre-filled with the car. */
 export function VehicleEnquiryForm({
   vehicleId,
   vehicleTitle,
@@ -28,7 +25,9 @@ export function VehicleEnquiryForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const renderedAt = useRef(0);
-  useEffect(() => { renderedAt.current = Date.now(); }, []);
+  useEffect(() => {
+    renderedAt.current = Date.now();
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,19 +51,30 @@ export function VehicleEnquiryForm({
   if (done) return <LeadSuccess phone={phone} whatsappUrl={whatsappUrl} />;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate={false}>
       <Honeypot value={website} onChange={setWebsite} />
       <Field label="Name" required>
-        <TextInput value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" placeholder="Your name" disabled={loading} />
+        {(c) => <TextInput {...c} value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" disabled={loading} />}
       </Field>
       <Field label="Phone" required>
-        <TextInput value={phoneVal} onChange={(e) => setPhoneVal(e.target.value)} required type="tel" inputMode="tel" autoComplete="tel" placeholder="04XX XXX XXX" pattern="[0-9\s\+\-\(\)]+" disabled={loading} />
+        {(c) => (
+          <TextInput
+            {...c}
+            value={phoneVal}
+            onChange={(e) => setPhoneVal(e.target.value)}
+            required
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="04XX XXX XXX"
+            pattern={PHONE_PATTERN}
+            disabled={loading}
+          />
+        )}
       </Field>
-      <Field label="Message">
-        <TextArea value={message} onChange={(e) => setMessage(e.target.value)} disabled={loading} />
-      </Field>
+      <Field label="Message">{(c) => <TextArea {...c} value={message} onChange={(e) => setMessage(e.target.value)} disabled={loading} />}</Field>
       <TurnstileField onToken={setToken} />
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? <FormError>{error}</FormError> : null}
       <SubmitButton loading={loading}>Send enquiry</SubmitButton>
       <p className="text-xs text-muted-foreground">{PRIVACY_MICROCOPY}</p>
     </form>

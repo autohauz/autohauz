@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireCronSecret } from "@/lib/security/cron";
+import { env } from "@/lib/env";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
+
   const supabase = createAdminClient();
 
   // 1. Fetch pending webhook events
@@ -27,7 +32,7 @@ export async function GET() {
     .update({ status: "processing" })
     .in("id", eventIds);
 
-  const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
+  const pageAccessToken = env.META_PAGE_ACCESS_TOKEN;
   let processedCount = 0;
   let errorCount = 0;
 

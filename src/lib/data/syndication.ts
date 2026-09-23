@@ -47,6 +47,9 @@ function toCanonical(row: any): CanonicalVehicle {
 
     make: row.make,
     model: row.model,
+    makeSlug: row.make_slug ?? null,
+    modelSlug: row.model_slug ?? null,
+    vehicleSlug: row.vehicle_slug ?? null,
     variant: row.variant ?? null,
     badge: row.badge ?? null,
     bodyType: row.body_type,

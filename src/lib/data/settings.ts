@@ -31,9 +31,7 @@ export const getCompanyProfile = unstable_cache(
   async (): Promise<Record<string, unknown>> => {
     const supabase = createAdminClient();
     const { data } = await supabase.from("settings").select("value").eq("key", "company_profile").maybeSingle();
-    const profile = (data?.value ?? {}) as Record<string, unknown>;
-    profile.email = "Sales@cars365.info";
-    return profile;
+    return (data?.value ?? {}) as Record<string, unknown>;
   },
   ["company-profile"],
   { revalidate: 3600, tags: ["settings"] },
@@ -44,8 +42,8 @@ export const getPhoneNumbers = unstable_cache(
     const supabase = createAdminClient();
     const { data } = await supabase.from("settings").select("value").eq("key", "phone_numbers").maybeSingle();
     const v = (data?.value ?? {}) as Record<string, unknown>;
-    // Return the updated phone numbers to the UI
-    return { primary: String(v.primary || "1800 CAR 365"), whatsapp: String(v.whatsapp || "+61451344477") };
+    // No fallbacks: an unset number must render nothing, never another business's number.
+    return { primary: String(v.primary ?? ""), whatsapp: String(v.whatsapp ?? "") };
   },
   ["phone-numbers"],
   { revalidate: 3600, tags: ["settings"] },

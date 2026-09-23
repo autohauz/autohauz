@@ -1,18 +1,8 @@
+import { VEHICLE_PLACEHOLDER } from "@/lib/media";
+
 /**
- * image-utils.ts
- *
- * Single source of truth for resolving a vehicle image URL from Supabase Storage.
- *
- * The system uses TWO storage buckets:
- *   "vehicle-images"         — public  — images uploaded by APPROVED orgs   (approved=true)
- *   "pending-vehicle-images" — private — images uploaded by PENDING  orgs   (approved=false)
- *
- * getPublicUrl() on the PRIVATE bucket returns a URL that always 404s for public users.
- * This helper always routes to the correct bucket based on the `approved` flag.
- *
- * Priority order when resolving a fallback:
- *   1. Category-specific Unsplash stock photo (relevant visuals, never broken)
- *   2. Generic car placeholder
+ * image-utils.ts — resolves vehicle image URLs from Supabase Storage for the
+ * search index and gallery, falling back to the neutral placeholder.
  */
 
 /** Minimal image record returned from vehicle_images join */
@@ -22,25 +12,9 @@ export type VehicleImageRecord = {
   sort_order: number;
 };
 
-/** Category → stock photo fallback */
-const CATEGORY_PLACEHOLDERS: Record<string, string> = {
-  Sedan:         "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80",
-  SUV:           "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=800&q=80",
-  Van:           "https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=800&q=80",
-  Ute:           "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-  Luxury:        "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80",
-  "People mover":"https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-  Truck:         "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80",
-  Electric:      "https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=800&q=80",
-  Hatchback:     "https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=800&q=80",
-};
-
-const GENERIC_PLACEHOLDER =
-  "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80";
-
-/** Return an appropriate fallback for a category (never a broken URL). */
-export function getCategoryFallback(category?: string | null): string {
-  return (category && CATEGORY_PLACEHOLDERS[category]) ?? GENERIC_PLACEHOLDER;
+/** Category fallback — always the neutral placeholder (no stock photos). */
+export function getCategoryFallback(): string {
+  return VEHICLE_PLACEHOLDER;
 }
 
 /**
@@ -66,15 +40,13 @@ export function buildStorageUrl(supabaseUrl: string, img: VehicleImageRecord): s
  *
  * @param supabaseUrl   process.env.NEXT_PUBLIC_SUPABASE_URL
  * @param images        Rows from vehicle_images join
- * @param category      Vehicle category for fallback selection
  */
 export function resolveVehicleImage(
   supabaseUrl: string,
   images: VehicleImageRecord[] | null | undefined,
-  category?: string | null,
 ): string {
   if (!images || images.length === 0) {
-    return getCategoryFallback(category);
+    return getCategoryFallback();
   }
 
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
@@ -184,7 +156,7 @@ export function getVehicleImages(vehicle: FallbackVehicle): GalleryImage[] {
   
   // 3. Fallback to category stock photo if completely empty
   if (combined.length === 0) {
-    const fallbackUrl = getCategoryFallback(vehicle.category);
+    const fallbackUrl = getCategoryFallback();
     return [
       {
         id: "fallback-category-stock",

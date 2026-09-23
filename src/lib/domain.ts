@@ -22,7 +22,7 @@ export type FeatureCategory = "comfort" | "safety" | "technology" | "exterior";
 
 export type LeadType =
   | "vehicle_enquiry" | "inspection" | "finance" | "trade_in"
-  | "sell" | "callback" | "general" | "waitlist";
+  | "sell" | "callback" | "general";
 export type LeadStatus =
   | "new" | "contacted" | "qualified" | "inspection_scheduled"
   | "negotiation" | "won" | "lost" | "spam";
@@ -127,7 +127,6 @@ export type VehicleDetail = VehicleListItem & {
   inspectionAvailable: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
-  tiktokEmbedHtml?: string | null;
   images: VehicleImage[];
   features: Feature[];
   location: LocationBranch | null;
@@ -263,10 +262,86 @@ export type VehicleListingResult = {
   };
 };
 
-// ── Finance estimate (SRS FR-13) ────────────────────────────────────────────
 export type FinanceParams = {
   annualRate: number;
   termMonths: number;
   depositPct: number;
   disclaimer: string;
+};
+
+// ── Invoicing (Phase 7) ──────────────────────────────────────────────────────
+export type InvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "void";
+
+export type Invoice = {
+  id: string;
+  invoiceNumber: string | null;
+  status: InvoiceStatus;
+  leadId: string | null;
+  vehicleId: string | null;
+
+  // Billing Snapshot
+  billingName: string;
+  billingEmail: string | null;
+  billingPhone: string | null;
+  billingAddress: string | null;
+  billingAbn: string | null;
+
+  // Config Snapshot
+  gstEnabled: boolean;
+  gstRate: number;
+  pricesIncludeGst: boolean;
+
+  // Amounts
+  subtotalCents: number;
+  lineDiscountsCents: number;
+  invoiceDiscountCents: number;
+  netExGstCents: number;
+  gstCents: number;
+  totalIncGstCents: number;
+  paymentsCents: number;
+
+  dueDate: string | null;
+  issuedAt: string | null;
+  paidAt: string | null;
+  voidedAt: string | null;
+
+  notes: string | null;
+  paymentTerms: string | null;
+  footerNote: string | null;
+
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InvoiceItem = {
+  id: string;
+  invoiceId: string;
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  discountCents: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InvoicePayment = {
+  id: string;
+  invoiceId: string;
+  amountCents: number;
+  paymentDate: string;
+  paymentMethod: string;
+  referenceNumber: string | null;
+  notes: string | null;
+  recordedById: string | null;
+  createdAt: string;
+};
+
+export type InvoiceEvent = {
+  id: string;
+  invoiceId: string;
+  actorId: string | null;
+  event: "created" | "updated" | "issued" | "payment_recorded" | "voided" | "emailed";
+  data: Record<string, unknown>;
+  createdAt: string;
 };

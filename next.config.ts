@@ -1,9 +1,28 @@
 import type { NextConfig } from "next";
 
-const scriptSrc =
-  process.env.NODE_ENV === "development"
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com;"
-    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;";
+const isDev = process.env.NODE_ENV === "development";
+
+// Google Analytics is opt-in (NEXT_PUBLIC_GA_MEASUREMENT_ID). Its hosts are only
+// admitted to the CSP when it is configured, so an unconfigured site does not
+// carry a standing exception for a third party it never contacts.
+const gaEnabled = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
+const gaScriptHosts = gaEnabled ? " https://www.googletagmanager.com" : "";
+const gaConnectHosts = gaEnabled ? " https://www.google-analytics.com https://analytics.google.com" : "";
+
+// Supabase project host — the only remote image origin the app needs (vehicle
+// photos in the public `media` bucket). Derived from the URL so nothing else
+// can be hot-linked through next/image.
+const supabaseHost = (() => {
+  try {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
+const scriptSrc = isDev
+  ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com${gaScriptHosts};`
+  : `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${gaScriptHosts};`;
 
 const nextConfig: NextConfig = {
   // Remove "X-Powered-By: Next.js" from every response — reduces attack surface
@@ -29,16 +48,10 @@ const nextConfig: NextConfig = {
     //   1200 → desktop card / detail thumb, 1920 → full-bleed VDP gallery
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [256, 384, 512],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-      {
-        protocol: "http",
-        hostname: "**",
-      },
-    ],
+    // Only the Supabase storage host (vehicle photos). Never a wildcard: with
+    // `unoptimized: true` the pattern list is still the allow-list for
+    // <Image src> on remote origins.
+    remotePatterns: supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost }] : [],
   },
   async headers() {
     return [
@@ -49,7 +62,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://*.typesense.net; frame-src https://challenges.cloudflare.com https://maps.google.com https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;`,
+              `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co${gaConnectHosts}; frame-src https://challenges.cloudflare.com https://maps.google.com https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;`,
           },
           {
             key: "Strict-Transport-Security",
@@ -76,18 +89,21 @@ const nextConfig: NextConfig = {
           // API responses should never be cached by a shared proxy or CDN edge
           // unless the route explicitly opts in with Cache-Control.
           { key: "Cache-Control", value: "no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
       {
         source: "/admin/:path*",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
       {
         source: "/auth/:path*",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
       // ── Geo-restriction landing page ────────────────────────────────────────
@@ -101,25 +117,6 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "private, no-store" },
         ],
       },
-    ];
-  },
-  async redirects() {
-    return [
-      {
-        source: "/account/listings",
-        destination: "/admin/inventory",
-        permanent: true,
-      },
-      {
-        source: "/account(.*)",
-        destination: "/admin",
-        permanent: true,
-      },
-      {
-        source: "/vendor(.*)",
-        destination: "/admin",
-        permanent: true,
-      }
     ];
   },
 };

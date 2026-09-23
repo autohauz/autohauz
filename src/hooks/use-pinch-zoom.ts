@@ -47,11 +47,14 @@ export function usePinchZoom(
       return Math.sqrt(dx * dx + dy * dy);
     }
 
+    // Midpoint of the two touches, relative to the element's box so it can be
+    // used directly as `transform-origin`.
     function getOrigin(touches: TouchList): { x: number; y: number } {
       const [t1, t2] = [touches[0], touches[1]];
+      const rect = element!.getBoundingClientRect();
       return {
-        x: (t1.clientX + t2.clientX) / 2,
-        y: (t1.clientY + t2.clientY) / 2,
+        x: (t1.clientX + t2.clientX) / 2 - rect.left,
+        y: (t1.clientY + t2.clientY) / 2 - rect.top,
       };
     }
 

@@ -38,7 +38,7 @@ export function useSwipeGesture(
       tracking = true;
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
+    const handlePointerMove = () => {
       if (!tracking) return;
     };
 

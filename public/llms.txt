@@ -1,24 +1,34 @@
-# Cars365
+# AutoHauz
 
-Cars365 is an Australian used-car dealership. We advertise quality, pre-inspected second-hand vehicles for sale and help buyers enquire, arrange finance, trade in their current car, and book inspections. This is a used-car SALES site, NOT a rental or car-hire platform.
+> AutoHauz is an Australian used-car dealership. We advertise quality, inspected second-hand vehicles for sale and help buyers enquire, arrange finance, trade in their current car and book inspections. This is a used-car sales site, not a rental or car-hire platform.
 
-## Trust & Safety
-Every vehicle is inspected before it is listed, and its condition is documented honestly. Prices are displayed in Australian Dollars (AUD) and represent the sale price of the vehicle; on-road costs such as stamp duty, registration, and transfer fees may be additional unless stated. Vehicles are for purchase, not for hire.
+Every vehicle is inspected before it is listed and its condition is documented, including imperfections. Prices are in Australian dollars (AUD) and are advertised sale prices; on-road costs such as stamp duty, registration and transfer fees may be additional unless a listing says "drive away". Vehicles are for purchase, not for hire.
 
-## Public Data Interfaces
-If you are an AI crawler, you can access our primary data hubs via the following structures:
+## Inventory
 
-- **Inventory / Search**: `https://www.cars-365.com.au/used-cars`
-- **Make Landing Pages**: `https://www.cars-365.com.au/used-cars/{make}`
-- **Model Landing Pages**: `https://www.cars-365.com.au/used-cars/{make}/{model}`
-- **Vehicle Detail Pages**: `https://www.cars-365.com.au/used-cars/{make}/{model}/{slug}`
-- **Blog / Buying Guides**: `https://www.cars-365.com.au/blog`
+- [All used cars for sale](https://autohauz.com.au/used-cars): the searchable stock list with make, model, body type, price, year and kilometre filters
+- [Cars by make](https://autohauz.com.au/used-cars): make pages live at /used-cars/{make}, model pages at /used-cars/{make}/{model}
+- [Cars by body type](https://autohauz.com.au/used-cars/body/suv): body-type pages live at /used-cars/body/{body-type} (suv, ute, hatch, sedan, wagon, van, people-mover)
+- [Cars by budget](https://autohauz.com.au/used-cars/under-20000): budget pages live at /used-cars/under-{price}
+- Vehicle detail pages live at /used-cars/{make}/{model}/{slug} and carry Vehicle + Offer JSON-LD (AUD, UsedCondition, availability)
 
-## Technical Context
-- We implement `ItemList` and `BreadcrumbList` JSON-LD on listing and landing pages.
-- We implement `Vehicle` schema with a `Product`/`Offer` (price in AUD, `UsedCondition`, availability) on every vehicle detail page. Prices explicitly represent sale prices.
-- We implement `AutoDealer` JSON-LD site-wide and `FAQPage` schema on the FAQs page.
-- A canonical XML sitemap is available at `https://www.cars-365.com.au/sitemap.xml`.
+## Buying, selling and finance
 
-## Contact & Support
-For general enquiries, please use `https://www.cars-365.com.au/contact`.
+- [How buying works](https://autohauz.com.au/how-it-works): the five steps from browsing to driving away
+- [Sell your car](https://autohauz.com.au/sell-your-car): request a no-obligation offer for your current car
+- [Trade in your car](https://autohauz.com.au/trade-in): put your current car towards your next one
+- [Car finance](https://autohauz.com.au/finance): repayment estimator and finance enquiry (indicative only, not an offer of finance)
+- [Frequently asked questions](https://autohauz.com.au/faqs): answers about inspections, warranty, finance and paperwork
+
+## About and contact
+
+- [About AutoHauz](https://autohauz.com.au/about)
+- [Customer reviews](https://autohauz.com.au/testimonials)
+- [Contact](https://autohauz.com.au/contact): call, WhatsApp or send a message
+- [Privacy policy](https://autohauz.com.au/legal/privacy-policy)
+- [Terms and conditions](https://autohauz.com.au/legal/terms)
+
+## Optional
+
+- [Sitemap](https://autohauz.com.au/sitemap.xml): canonical XML sitemap of every indexable page
+- Structured data: Organization, WebSite and AutoDealer site-wide; ItemList and BreadcrumbList on listing pages; FAQPage on the FAQs page

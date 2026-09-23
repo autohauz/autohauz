@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import {
   Breadcrumb,
@@ -25,7 +26,7 @@ export type Crumb = [label: string, path: string];
  *
  *  1. **No BreadcrumbList markup.** Only the vehicle detail page emitted
  *     breadcrumb JSON-LD, so Google rendered a bare URL instead of a
- *     `cars-365.com.au › Used Cars › Toyota` trail for every landing page.
+ *     `autohauz.com.au › Used Cars › Toyota` trail for every landing page.
  *     Rendering the trail here means publishing the markup is automatic.
  *  2. **Non-semantic markup.** The originals were a `<nav>` wrapping loose
  *     `<span>`s. This uses the project's existing (previously unused)
@@ -57,18 +58,20 @@ export function ListingBreadcrumbs({
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
           {crumbs.map(([label, path], i) => (
-            <BreadcrumbItem key={`${path}-${i}`}>
-              {i === lastIndex ? (
-                <BreadcrumbPage>{label}</BreadcrumbPage>
-              ) : (
-                <>
+            // Item and separator are siblings: both render <li>, and an <li>
+            // inside an <li> is invalid HTML that forces a hydration re-render.
+            <Fragment key={`${path}-${i}`}>
+              <BreadcrumbItem>
+                {i === lastIndex ? (
+                  <BreadcrumbPage>{label}</BreadcrumbPage>
+                ) : (
                   <BreadcrumbLink asChild>
                     <Link href={path}>{label}</Link>
                   </BreadcrumbLink>
-                  <BreadcrumbSeparator />
-                </>
-              )}
-            </BreadcrumbItem>
+                )}
+              </BreadcrumbItem>
+              {i === lastIndex ? null : <BreadcrumbSeparator />}
+            </Fragment>
           ))}
         </BreadcrumbList>
       </Breadcrumb>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Edit, Trash2, CheckCircle, Clock, Archive } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { setVehicleStatus, deleteVehicle } from "./actions";
 import { toast } from "sonner";
 

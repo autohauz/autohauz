@@ -1,77 +1,47 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendAdminPendingReminderEmail, sendVendorUnreadLeadReminderEmail } from "@/lib/email/ses";
+import { sendStaffReminderEmail } from "@/lib/email/ses";
+import { notificationRecipients } from "@/lib/leads/notify";
+import { getAppUrl } from "@/lib/config";
+import { requireCronSecret } from "@/lib/security/cron";
 
-// This endpoint MUST be protected by a cron secret in all environments.
-// Fail-closed: if CRON_SECRET is not configured, no one can trigger this endpoint —
-// better to miss a reminder than to allow unauthenticated access to admin operations.
+/** Leads still "new" after this long are overdue for first contact. */
+const STALE_LEAD_HOURS = 24;
+
 export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
-  const results = { adminReminded: false, vendorRemindersSent: 0 };
+  const staleBefore = new Date(Date.now() - STALE_LEAD_HOURS * 60 * 60 * 1000).toISOString();
 
-  // 1. Check for Pending Vendors and Vehicles to remind Admin
-  const { count: pendingVendors } = await supabase
-    .from("organizations")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "pending");
+  const [{ count: staleNewLeads }, { count: draftVehicles }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new")
+      .lt("created_at", staleBefore),
+    supabase
+      .from("vehicles")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "draft"),
+  ]);
 
-  const { count: pendingVehicles } = await supabase
-    .from("vehicles")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "pending");
+  const results = { staleNewLeads: staleNewLeads ?? 0, draftVehicles: draftVehicles ?? 0, reminded: false };
 
-  if ((pendingVendors && pendingVendors > 0) || (pendingVehicles && pendingVehicles > 0)) {
-    // Notify admin
-    const adminEmail = process.env.ADMIN_EMAIL || "support@cars-365.com.au";
-    await sendAdminPendingReminderEmail({
-      to: adminEmail,
-      pendingVendorsCount: pendingVendors || 0,
-      pendingVehiclesCount: pendingVehicles || 0,
-    });
-    results.adminReminded = true;
+  // Nothing to nudge about — stay quiet rather than send an empty digest.
+  if (results.staleNewLeads === 0 && results.draftVehicles === 0) {
+    return NextResponse.json({ success: true, results });
   }
 
-  // 2. Check for Leads with 'new' status (unread/unresponded)
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  
-  // Find leads created before 24h ago that are still 'new'
-  const { data: unreadLeads } = await supabase
-    .from("leads")
-    .select("id, organization_id, organizations(name, billing_email)")
-    .eq("status", "new")
-    .lt("created_at", twentyFourHoursAgo);
-
-  if (unreadLeads && unreadLeads.length > 0) {
-    // Group by organization
-    const orgsToRemind = new Map<string, { email: string; name: string; count: number }>();
-    
-    for (const lead of unreadLeads) {
-      const org = lead.organizations as unknown as { name: string; billing_email: string };
-      if (!org || !org.billing_email) continue;
-      
-      if (!orgsToRemind.has(lead.organization_id)) {
-        orgsToRemind.set(lead.organization_id, { email: org.billing_email, name: org.name, count: 0 });
-      }
-      orgsToRemind.get(lead.organization_id)!.count++;
-    }
-
-    // Send reminders to vendors
-    for (const [orgId, data] of orgsToRemind.entries()) {
-      await sendVendorUnreadLeadReminderEmail({
-        to: data.email,
-        vendorName: data.name,
-        unreadCount: data.count,
-      });
-      results.vendorRemindersSent++;
-    }
-  }
+  const to = await notificationRecipients();
+  const sent = await sendStaffReminderEmail({
+    to,
+    staleNewLeads: results.staleNewLeads,
+    draftVehicles: results.draftVehicles,
+    adminUrl: `${getAppUrl()}/admin`,
+  });
+  results.reminded = !sent.skipped;
 
   return NextResponse.json({ success: true, results });
 }

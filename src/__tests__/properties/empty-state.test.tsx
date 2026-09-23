@@ -1,166 +1,63 @@
-// Feature: elite-ui-overhaul, Property 8: Empty State Display for Zero-Item Collections
+// Property: every empty state carries an icon, a heading, a message, and a CTA.
 // @vitest-environment jsdom
-
-/**
- * Property Test: Empty State Display for Zero-Item Collections
- *
- * For any list/grid rendered with zero items, output SHALL contain
- * an icon element, a descriptive message, and a CTA element (button or link).
- *
- * **Validates: Requirements 12.3**
- */
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
 import { render } from "@testing-library/react";
 import { PBT_CONFIG } from "./setup";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
-// ─── Arbitraries ─────────────────────────────────────────────────────────────
+// Each run mounts a React tree; 25 runs keeps the file well inside Vitest's per-test timeout on a cold jsdom.
+const RENDER_RUNS = { ...PBT_CONFIG, numRuns: 25 };
 
-/**
- * Generates random non-empty title strings for the empty state heading.
- */
-const titleArb = fc
-  .string({ minLength: 1, maxLength: 100 })
-  .filter((s) => s.trim().length > 0);
+const text = (max: number) => fc.string({ minLength: 1, maxLength: max }).filter((s) => s.trim().length > 0);
 
-/**
- * Generates random non-empty description strings for the empty state message.
- */
-const descriptionArb = fc
-  .string({ minLength: 1, maxLength: 200 })
-  .filter((s) => s.trim().length > 0);
+const hrefArb = fc.constantFrom("/used-cars", "/", "/contact", "/admin/invoices/new");
 
-/**
- * Generates random CTA label strings.
- */
-const actionLabelArb = fc
-  .string({ minLength: 1, maxLength: 50 })
-  .filter((s) => s.trim().length > 0);
-
-/**
- * Generates random href paths for link-based CTAs.
- */
-const actionHrefArb = fc.constantFrom(
-  "/search",
-  "/",
-  "/vehicles",
-  "/dashboard",
-  "/settings",
-  "/contact"
-);
-
-/**
- * Generates valid EmptyState props with actionHref (link CTA variant).
- */
-const emptyStatePropsWithHrefArb = fc.record({
-  title: titleArb,
-  description: descriptionArb,
-  actionLabel: actionLabelArb,
-  actionHref: actionHrefArb,
-});
-
-/**
- * Generates valid EmptyState props with onAction (button CTA variant).
- */
-const emptyStatePropsWithActionArb = fc.record({
-  title: titleArb,
-  description: descriptionArb,
-  actionLabel: actionLabelArb,
-});
-
-describe("Property 8: Empty State Display for Zero-Item Collections", () => {
-  it("rendered EmptyState with link CTA SHALL contain an icon, message, and CTA element for any valid props", () => {
+describe("EmptyState", () => {
+  it("renders icon, heading, message, and a link CTA for any valid props", () => {
     fc.assert(
-      fc.property(emptyStatePropsWithHrefArb, (props) => {
+      fc.property(fc.record({ title: text(100), description: text(200), label: text(50), href: hrefArb }), (p) => {
         const { container } = render(
-          <EmptyState
-            title={props.title}
-            description={props.description}
-            actionLabel={props.actionLabel}
-            actionHref={props.actionHref}
-          />
+          <EmptyState title={p.title} description={p.description} action={{ label: p.label, href: p.href }} />,
         );
-
-        // SHALL contain an icon element (svg within the icon container)
-        const iconContainer = container.querySelector(
-          "div.flex.h-16.w-16"
-        );
-        expect(iconContainer).not.toBeNull();
-        const svgIcon = iconContainer?.querySelector("svg");
-        expect(svgIcon).not.toBeNull();
-
-        // SHALL contain a descriptive message (the description paragraph)
-        const message = container.querySelector("p");
-        expect(message).not.toBeNull();
-        expect(message!.textContent).toBe(props.description);
-
-        // SHALL contain a CTA element (link with button inside)
-        const ctaLink = container.querySelector("a");
-        expect(ctaLink).not.toBeNull();
-        const ctaButton = ctaLink?.querySelector("button");
-        expect(ctaButton).not.toBeNull();
-        expect(ctaButton!.textContent).toBe(props.actionLabel);
+        expect(container.querySelector("svg")).not.toBeNull();
+        expect(container.querySelector("h2")!.textContent).toBe(p.title);
+        expect(container.querySelector("p")!.textContent).toBe(p.description);
+        const link = container.querySelector("a")!;
+        expect(link.getAttribute("href")).toBe(p.href);
+        expect(link.textContent).toBe(p.label);
+        // A link is never nested inside a button or vice versa.
+        expect(container.querySelector("a button, button a")).toBeNull();
       }),
-      PBT_CONFIG
+      RENDER_RUNS,
     );
   });
 
-  it("rendered EmptyState with button CTA SHALL contain an icon, message, and CTA element for any valid props", () => {
-    const onAction = () => {};
-
+  it("renders a button CTA when given an onClick action", () => {
     fc.assert(
-      fc.property(emptyStatePropsWithActionArb, (props) => {
+      fc.property(fc.record({ title: text(100), description: text(200), label: text(50) }), (p) => {
         const { container } = render(
-          <EmptyState
-            title={props.title}
-            description={props.description}
-            actionLabel={props.actionLabel}
-            onAction={onAction}
-          />
+          <EmptyState title={p.title} description={p.description} action={{ label: p.label, onClick: () => {} }} />,
         );
-
-        // SHALL contain an icon element (svg within the icon container)
-        const iconContainer = container.querySelector(
-          "div.flex.h-16.w-16"
-        );
-        expect(iconContainer).not.toBeNull();
-        const svgIcon = iconContainer?.querySelector("svg");
-        expect(svgIcon).not.toBeNull();
-
-        // SHALL contain a descriptive message (the description paragraph)
-        const message = container.querySelector("p");
-        expect(message).not.toBeNull();
-        expect(message!.textContent).toBe(props.description);
-
-        // SHALL contain a CTA element (button)
-        const ctaButton = container.querySelector("button");
-        expect(ctaButton).not.toBeNull();
-        expect(ctaButton!.textContent).toBe(props.actionLabel);
+        const button = container.querySelector("button")!;
+        expect(button).not.toBeNull();
+        expect(button.textContent).toBe(p.label);
+        expect(button.getAttribute("type")).toBe("button");
       }),
-      PBT_CONFIG
+      RENDER_RUNS,
     );
   });
 
-  it("rendered EmptyState SHALL always display a heading with the title text", () => {
-    fc.assert(
-      fc.property(emptyStatePropsWithHrefArb, (props) => {
-        const { container } = render(
-          <EmptyState
-            title={props.title}
-            description={props.description}
-            actionLabel={props.actionLabel}
-            actionHref={props.actionHref}
-          />
-        );
+  it("renders the requested heading level", () => {
+    const { container } = render(<EmptyState title="Inside a section" description="…" headingLevel="h3" />);
+    expect(container.querySelector("h3")!.textContent).toBe("Inside a section");
+    expect(container.querySelector("h2")).toBeNull();
+  });
 
-        // SHALL contain a heading element with the title
-        const heading = container.querySelector("h3");
-        expect(heading).not.toBeNull();
-        expect(heading!.textContent).toBe(props.title);
-      }),
-      PBT_CONFIG
-    );
+  it("renders no CTA row when no action is given", () => {
+    const { container } = render(<EmptyState title="Nothing here" description="Add something." />);
+    expect(container.querySelector("a, button")).toBeNull();
+    expect(container.querySelector("h2")!.textContent).toBe("Nothing here");
   });
 });

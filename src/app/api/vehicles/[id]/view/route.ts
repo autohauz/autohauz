@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientIp, hashIpForStorage } from "@/lib/security/rate-limit";
+import { clientIp, hashIp } from "@/lib/security/ip";
 import { rateLimitSlidingWindow } from "@/lib/security/rate-limit-redis";
 import { getCurrentUser } from "@/lib/security/auth";
 
@@ -21,7 +21,7 @@ export async function POST(
       );
     }
 
-    const ipHash = hashIpForStorage(ip);
+    const ipHash = hashIp(ip);
     const user = await getCurrentUser();
     
     // Quick validation

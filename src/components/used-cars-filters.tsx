@@ -1,22 +1,51 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useCallback, useId, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { Select } from "@/components/ui/select";
+import { inputClassName } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { BODY_TYPE_LABELS, FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/nav";
 import type { BodyType, FuelType, Make, Model, TransmissionType, VehicleListingResult } from "@/lib/domain";
+import { cn } from "@/lib/utils";
 
 type Facets = VehicleListingResult["facets"];
+type HiddenFilter = "make" | "body";
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "recommended", label: "Recommended" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "year_desc", label: "Year: Newest" },
-  { value: "km_asc", label: "Kilometres: Lowest" },
-  { value: "newest", label: "Recently added" },
-];
+/** Every query key the sidebar controls; `sort` and `page` are deliberately not filters. */
+export const FILTER_KEYS = [
+  "status",
+  "make",
+  "model",
+  "body",
+  "fuel",
+  "transmission",
+  "price_min",
+  "price_max",
+  "year_min",
+  "year_max",
+  "km_max",
+] as const;
 
+/** Number of filters set in the URL, ignoring dimensions the route has locked. */
+export function countActiveFilters(params: URLSearchParams, hidden: HiddenFilter[] = []): number {
+  return FILTER_KEYS.filter((key) => {
+    if (hidden.includes("make") && (key === "make" || key === "model")) return false;
+    if (hidden.includes("body") && key === "body") return false;
+    return Boolean(params.get(key));
+  }).length;
+}
+
+/**
+ * Faceted filters for the inventory listing — DESIGN.md §6/§9.
+ *
+ * Every change writes the URL (so results are shareable and the back button
+ * works) and returns to page 1. Facets are single-select buttons with
+ * `aria-pressed`; ranges commit on blur/Enter so typing "25000" doesn't fire
+ * five navigations. The same component renders in the ≥ lg sidebar and in the
+ * < lg sheet.
+ */
 export function UsedCarsFilters({
   makes,
   allModels = [],
@@ -26,242 +55,271 @@ export function UsedCarsFilters({
   makes: Make[];
   allModels?: Model[];
   facets: Facets;
-  hideFilters?: ("make" | "body")[];
+  hideFilters?: HiddenFilter[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [pending, startTransition] = useTransition();
+  const id = useId();
 
-  const setParam = useCallback(
-    (key: string, value: string | null) => {
+  const navigate = useCallback(
+    (mutate: (next: URLSearchParams) => void) => {
       const next = new URLSearchParams(params.toString());
-      if (value == null || value === "") next.delete(key);
-      else next.set(key, value);
+      mutate(next);
       next.delete("page"); // any filter change returns to page 1
       const qs = next.toString();
-      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
     },
     [params, pathname, router],
   );
 
+  const setParam = useCallback(
+    (key: string, value: string | null) =>
+      navigate((next) => {
+        if (value == null || value === "") next.delete(key);
+        else next.set(key, value);
+      }),
+    [navigate],
+  );
+
   const get = (k: string) => params.get(k) ?? "";
-  const activeCount = ["status", "make", "model", "body", "fuel", "transmission", "price_min", "price_max", "year_min", "year_max", "km_max"].filter(
-    (k) => params.get(k),
-  ).length;
+  const activeCount = countActiveFilters(params, hideFilters);
 
   const selectedMake = makes.find((m) => m.slug === get("make"));
-  const selectedMakeId = selectedMake?.id;
-  const filteredModels = allModels.filter((m) => m.makeId === selectedMakeId);
+  const models = selectedMake ? allModels.filter((m) => m.makeId === selectedMake.id) : [];
 
   return (
-    <div className="space-y-6">
-      {/* Sort */}
-      <FilterGroup label="Sort by">
-        <select
-          value={get("sort") || "recommended"}
-          onChange={(e) => setParam("sort", e.target.value === "recommended" ? null : e.target.value)}
-          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </FilterGroup>
-
-      {/* Availability */}
-      <FilterGroup label="Availability">
-        <select
+    <div className={cn("space-y-6", pending && "opacity-70")} aria-busy={pending || undefined}>
+      <FilterGroup id={`${id}-status`} label="Availability">
+        <Select
+          id={`${id}-status`}
           value={get("status") || "available"}
-          onChange={(e) => {
-            const val = e.target.value;
-            setParam("status", val === "available" ? null : val);
-          }}
-          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+          onChange={(e) => setParam("status", e.target.value === "available" ? null : e.target.value)}
         >
-          <option value="all">All Cars</option>
-          <option value="available">Available</option>
-          <option value="sold">Sold</option>
-        </select>
+          <option value="available">Available now</option>
+          <option value="all">Available and sold</option>
+          <option value="sold">Recently sold</option>
+        </Select>
       </FilterGroup>
 
-      {/* Make */}
       {!hideFilters.includes("make") ? (
-        <FilterGroup label="Make">
-          <select
+        <FilterGroup id={`${id}-make`} label="Make">
+          <Select
+            id={`${id}-make`}
             value={get("make")}
-            onChange={(e) => {
-              const val = e.target.value || null;
-              const next = new URLSearchParams(params.toString());
-              if (val == null || val === "") next.delete("make");
-              else next.set("make", val);
-              next.delete("model"); // Always clear model when make changes!
-              next.delete("page");
-              const qs = next.toString();
-              router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-            }}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+            onChange={(e) =>
+              navigate((next) => {
+                const value = e.target.value;
+                if (value) next.set("make", value);
+                else next.delete("make");
+                next.delete("model"); // a model belongs to one make
+              })
+            }
           >
-            <option value="">All makes</option>
+            <option value="">Any make</option>
             {makes.map((m) => (
-              <option key={m.slug} value={m.slug}>{m.name}</option>
+              <option key={m.slug} value={m.slug}>
+                {m.name}
+              </option>
             ))}
-          </select>
+          </Select>
         </FilterGroup>
       ) : null}
 
-      {/* Model */}
-      {!hideFilters.includes("make") && get("make") && filteredModels.length > 0 ? (
-        <FilterGroup label="Model">
-          <select
-            value={get("model")}
-            onChange={(e) => setParam("model", e.target.value || null)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
-          >
-            <option value="">All models</option>
-            {filteredModels.map((m) => (
-              <option key={m.slug} value={m.slug}>{m.name}</option>
+      {!hideFilters.includes("make") && selectedMake && models.length > 0 ? (
+        <FilterGroup id={`${id}-model`} label="Model">
+          <Select id={`${id}-model`} value={get("model")} onChange={(e) => setParam("model", e.target.value || null)}>
+            <option value="">Any {selectedMake.name} model</option>
+            {models.map((m) => (
+              <option key={m.slug} value={m.slug}>
+                {m.name}
+              </option>
             ))}
-          </select>
+          </Select>
         </FilterGroup>
       ) : null}
 
-      {/* Body type facets */}
       {!hideFilters.includes("body") && facets.bodyType.length > 0 ? (
-        <FilterGroup label="Body type">
-          <FacetList
-            options={facets.bodyType.map((f) => ({ value: f.value, label: BODY_TYPE_LABELS[f.value as BodyType] ?? f.value, count: f.count }))}
-            current={get("body")}
-            onSelect={(v) => setParam("body", v)}
-          />
-        </FilterGroup>
+        <FacetGroup
+          label="Body type"
+          options={facets.bodyType.map((f) => ({ value: f.value, label: BODY_TYPE_LABELS[f.value as BodyType] ?? f.label, count: f.count }))}
+          current={get("body")}
+          onSelect={(v) => setParam("body", v)}
+        />
       ) : null}
 
-      {/* Fuel facets */}
       {facets.fuelType.length > 0 ? (
-        <FilterGroup label="Fuel type">
-          <FacetList
-            options={facets.fuelType.map((f) => ({ value: f.value, label: FUEL_LABELS[f.value as FuelType] ?? f.value, count: f.count }))}
-            current={get("fuel")}
-            onSelect={(v) => setParam("fuel", v)}
-          />
-        </FilterGroup>
+        <FacetGroup
+          label="Fuel"
+          options={facets.fuelType.map((f) => ({ value: f.value, label: FUEL_LABELS[f.value as FuelType] ?? f.label, count: f.count }))}
+          current={get("fuel")}
+          onSelect={(v) => setParam("fuel", v)}
+        />
       ) : null}
 
-      {/* Transmission facets */}
       {facets.transmission.length > 0 ? (
-        <FilterGroup label="Transmission">
-          <FacetList
-            options={facets.transmission.map((f) => ({ value: f.value, label: TRANSMISSION_LABELS[f.value as TransmissionType] ?? f.value, count: f.count }))}
-            current={get("transmission")}
-            onSelect={(v) => setParam("transmission", v)}
-          />
-        </FilterGroup>
+        <FacetGroup
+          label="Transmission"
+          options={facets.transmission.map((f) => ({
+            value: f.value,
+            label: TRANSMISSION_LABELS[f.value as TransmissionType] ?? f.label,
+            count: f.count,
+          }))}
+          current={get("transmission")}
+          onSelect={(v) => setParam("transmission", v)}
+        />
       ) : null}
 
-      {/* Price range */}
-      <FilterGroup label="Price ($)">
-        <div className="flex items-center gap-2">
-          <RangeInput placeholder="Min" value={get("price_min")} onCommit={(v) => setParam("price_min", v)} />
-          <span className="text-muted-foreground">–</span>
-          <RangeInput placeholder="Max" value={get("price_max")} onCommit={(v) => setParam("price_max", v)} />
-        </div>
-      </FilterGroup>
+      <RangeGroup
+        label="Price"
+        from={{ id: `${id}-price-min`, label: "Minimum price", placeholder: "Min $", value: get("price_min"), onCommit: (v) => setParam("price_min", v) }}
+        to={{ id: `${id}-price-max`, label: "Maximum price", placeholder: "Max $", value: get("price_max"), onCommit: (v) => setParam("price_max", v) }}
+      />
 
-      {/* Year range */}
-      <FilterGroup label="Year">
-        <div className="flex items-center gap-2">
-          <RangeInput placeholder="From" value={get("year_min")} onCommit={(v) => setParam("year_min", v)} />
-          <span className="text-muted-foreground">–</span>
-          <RangeInput placeholder="To" value={get("year_max")} onCommit={(v) => setParam("year_max", v)} />
-        </div>
-      </FilterGroup>
+      <RangeGroup
+        label="Year"
+        from={{ id: `${id}-year-min`, label: "Earliest year", placeholder: "From", value: get("year_min"), onCommit: (v) => setParam("year_min", v), maxLength: 4 }}
+        to={{ id: `${id}-year-max`, label: "Latest year", placeholder: "To", value: get("year_max"), onCommit: (v) => setParam("year_max", v), maxLength: 4 }}
+      />
 
-      {/* Max km */}
-      <FilterGroup label="Max kilometres">
-        <RangeInput placeholder="e.g. 80000" value={get("km_max")} onCommit={(v) => setParam("km_max", v)} />
+      <FilterGroup id={`${id}-km`} label="Maximum kilometres">
+        <NumberInput id={`${id}-km`} label="Maximum kilometres" placeholder="e.g. 80,000" value={get("km_max")} onCommit={(v) => setParam("km_max", v)} />
       </FilterGroup>
 
       {activeCount > 0 ? (
-        <button
-          onClick={() => router.push(pathname, { scroll: false })}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted hover:text-primary"
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() =>
+            navigate((next) => {
+              for (const key of FILTER_KEYS) {
+                if (hideFilters.includes("make") && (key === "make" || key === "model")) continue;
+                if (hideFilters.includes("body") && key === "body") continue;
+                next.delete(key);
+              }
+            })
+          }
         >
-          <X className="size-4" /> Clear all filters
-        </button>
+          <X aria-hidden="true" />
+          Clear {activeCount === 1 ? "filter" : `${activeCount} filters`}
+        </Button>
       ) : null}
     </div>
   );
 }
 
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterGroup({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold text-foreground">{label}</h3>
+      <label htmlFor={id} className="mb-2 block text-sm font-semibold text-foreground">
+        {label}
+      </label>
       {children}
     </div>
   );
 }
 
-function FacetList({
+function FacetGroup({
+  label,
   options,
   current,
   onSelect,
 }: {
+  label: string;
   options: { value: string; label: string; count: number }[];
   current: string;
   onSelect: (value: string | null) => void;
 }) {
   return (
-    <ul className="space-y-1">
-      {options.map((o) => {
-        const active = current === o.value;
-        return (
-          <li key={o.value}>
-            <button
-              onClick={() => onSelect(active ? null : o.value)}
-              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-                active ? "bg-primary text-black font-semibold shadow-sm" : "text-body hover:bg-muted font-medium"
-              }`}
-            >
-              <span>{o.label}</span>
-              <span className={`text-xs ${active ? "text-black/70" : "text-muted-foreground"}`}>{o.count}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <fieldset>
+      <legend className="mb-2 text-sm font-semibold text-foreground">{label}</legend>
+      <ul className="space-y-1">
+        {options.map((o) => {
+          const active = current === o.value;
+          return (
+            <li key={o.value}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => onSelect(active ? null : o.value)}
+                className={cn(
+                  "flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-150",
+                  active ? "bg-accent-soft font-semibold text-accent-soft-foreground" : "text-body hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <span>{o.label}</span>
+                <span className={cn("tabular text-xs", active ? "text-accent-soft-foreground" : "text-muted-foreground")}>{o.count}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </fieldset>
   );
 }
 
-function RangeInput({
-  placeholder,
-  value,
-  onCommit,
-}: {
+type NumberInputProps = {
+  id: string;
+  /** Accessible name (visually hidden inside a range pair). */
+  label: string;
   placeholder: string;
   value: string;
   onCommit: (value: string | null) => void;
-}) {
-  const [local, setLocal] = useState(value);
-  const [prevValue, setPrevValue] = useState(value);
-  
-  if (value !== prevValue) {
-    setLocal(value);
-    setPrevValue(value);
-  }
+  maxLength?: number;
+};
 
+function RangeGroup({ label, from, to }: { label: string; from: NumberInputProps; to: NumberInputProps }) {
   return (
-    <input
-      type="number"
-      inputMode="numeric"
-      placeholder={placeholder}
-      value={local}
-      onChange={(e) => setLocal(e.target.value)}
-      onBlur={() => local !== value && onCommit(local || null)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-      }}
-      className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
-    />
+    <fieldset>
+      <legend className="mb-2 text-sm font-semibold text-foreground">{label}</legend>
+      <div className="flex items-center gap-2">
+        <NumberInput {...from} />
+        <span className="text-muted-foreground" aria-hidden="true">
+          –
+        </span>
+        <NumberInput {...to} />
+      </div>
+    </fieldset>
+  );
+}
+
+/** Digits-only text field that commits on blur or Enter (not on every keystroke). */
+function NumberInput({ id, label, placeholder, value, onCommit, maxLength }: NumberInputProps) {
+  const [local, setLocal] = useState(value);
+  const [prev, setPrev] = useState(value);
+  if (value !== prev) {
+    // The URL changed underneath us (chip removed, "clear all"): adopt it.
+    setLocal(value);
+    setPrev(value);
+  }
+  const commit = () => {
+    if (local !== value) onCommit(local || null);
+  };
+  return (
+    <>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={maxLength ?? 7}
+        placeholder={placeholder}
+        value={local}
+        onChange={(e) => setLocal(e.target.value.replace(/\D+/g, ""))}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          }
+        }}
+        className={cn(inputClassName, "tabular")}
+      />
+    </>
   );
 }

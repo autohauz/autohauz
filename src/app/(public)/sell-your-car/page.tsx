@@ -1,26 +1,30 @@
 import type { Metadata } from "next";
-import { Camera, PhoneCall, BadgeDollarSign } from "lucide-react";
+import Image from "next/image";
+import { Phone, MessageCircle } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SellTradeForm } from "@/components/leads/sell-trade-form";
+import { Container, PageHeader } from "@/components/ui/container";
+import { buttonVariants } from "@/components/ui/button";
 import { getPhoneNumbers } from "@/lib/data/settings";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { withRegion } from "@/config/seo";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = pageMetadata({
   path: "/sell-your-car",
-  title: "Sell Your Car in Sydney — Fast, Fair Offers",
-  description:
-    "Sell your car to us the easy way. Tell us a few details and we'll come back with a fair offer — no obligation, free valuation across Sydney and NSW.",
-  keywords: ["sell my car Sydney", "car valuation NSW", "sell used car Australia"],
+  title: withRegion("Sell to AutoHauz — Instant, Secure Appraisals"),
+  description: `${withRegion("Trade in or sell your vehicle directly to AutoHauz.")} We offer competitive, transparent valuations with immediate payment upon inspection.`,
+  keywords: ["sell my car", "car valuation", "sell used car"],
 });
 
 export const revalidate = 3600;
 
 const STEPS = [
-  { icon: Camera, title: "Tell us about it", body: "Share a few details about your car — it takes a minute." },
-  { icon: PhoneCall, title: "We review & call", body: "Our team reviews it and calls you to confirm the details." },
-  { icon: BadgeDollarSign, title: "Get a fair offer", body: "We make you a fair offer and can pay you fast." },
+  { title: "Provide vehicle details", body: "Enter your make, model, year, kilometres, and overall condition. Photos are recommended for the most accurate appraisal." },
+  { title: "Professional appraisal", body: "Our purchasing team evaluates your vehicle against current Australian market data and contacts you to discuss the details." },
+  { title: "Secure transaction", body: "Receive a formal, competitive offer. Once accepted, we arrange a secure handover and prompt payment." },
 ];
 
 export default async function SellYourCarPage() {
@@ -31,32 +35,74 @@ export default async function SellYourCarPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <header className="mb-8 max-w-2xl">
-          <h1 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">Sell your car the easy way</h1>
-          <p className="mt-3 text-body">No strangers at your home, no haggling. Tell us about your car and we&apos;ll come back with a fair offer.</p>
-        </header>
+      <main id="main">
+        <section className="relative h-[40vh] min-h-[320px] w-full bg-[#040f24] overflow-hidden">
+          <Image
+            src="/images/heroes/sell-car-hero.jpg"
+            alt="Professional vehicle appraisal"
+            fill
+            priority
+            className="object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        </section>
+        
+        <Container className="pb-8 lg:pb-12 relative z-10 -mt-20">
+          <div className="mb-10 rounded-xl bg-card border border-border p-6 sm:p-8 shadow-float">
+            <PageHeader
+              title="Premium valuations, zero hassle"
+              description="Skip the private market. Submit your vehicle details for a fast, competitive offer from the AutoHauz purchasing team."
+            />
+          </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.1fr]">
-          <div>
-            <ol className="space-y-6">
-              {STEPS.map((s, i) => (
-                <li key={s.title} className="flex gap-4">
-                  <div className="flex size-11 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary"><s.icon className="size-5" /></div>
-                  <div>
-                    <p className="text-sm font-semibold text-primary">Step {i + 1}</p>
-                    <h3 className="font-heading text-lg font-bold text-foreground">{s.title}</h3>
-                    <p className="text-sm text-body">{s.body}</p>
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
+            <div>
+              <h2 className="text-xl">How it works</h2>
+              <ol className="mt-6 space-y-6">
+                {STEPS.map((s, i) => (
+                  <li key={s.title} className="flex gap-4">
+                    <span className="tabular flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold">
+                        <span className="sr-only">Step {i + 1}: </span>
+                        {s.title}
+                      </h3>
+                      <p className="mt-1 text-sm leading-relaxed text-body">{s.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              {phone || whatsappUrl ? (
+                <div className="mt-10 rounded-lg border border-border bg-card p-5">
+                  <h2 className="text-base font-semibold">Prefer to talk?</h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {phone ? (
+                      <a href={`tel:${phone.replace(/\s+/g, "")}`} className={cn(buttonVariants({ variant: "outline" }))}>
+                        <Phone aria-hidden="true" /> Call {phone}
+                      </a>
+                    ) : null}
+                    {whatsappUrl ? (
+                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }))}>
+                        <MessageCircle aria-hidden="true" /> WhatsApp
+                      </a>
+                    ) : null}
                   </div>
-                </li>
-              ))}
-            </ol>
+                </div>
+              ) : null}
+            </div>
+
+            <section aria-labelledby="sell-form" className="rounded-lg border border-border bg-card p-5 sm:p-6">
+              <h2 id="sell-form" className="text-xl">
+                Get your offer
+              </h2>
+              <p className="mb-6 mt-1 text-sm text-body">Free, no obligation. We reply during business hours.</p>
+              <SellTradeForm mode="sell" phone={phone} whatsappUrl={whatsappUrl} />
+            </section>
           </div>
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="mb-4 font-heading text-lg font-bold text-foreground">Get your offer</h2>
-            <SellTradeForm mode="sell" phone={phone} whatsappUrl={whatsappUrl} />
-          </div>
-        </div>
+        </Container>
       </main>
       <SiteFooter />
     </>

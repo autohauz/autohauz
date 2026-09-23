@@ -1,5 +1,3 @@
-import { createHash } from "crypto";
-import { optionalEnv } from "@/lib/config";
 
 /**
  * Layered anti-spam for public lead forms (SRS §9.20 / §20):
@@ -55,17 +53,3 @@ export function normalizePhone(raw: string, defaultCc = "61"): string {
   return `+${defaultCc}${s}`;
 }
 
-/** Salted, non-reversible hash of a client IP (never store raw IPs — SRS §20). */
-export function hashIp(ip: string): string {
-  const salt = optionalEnv("IP_HASH_SECRET") || "unsalted-dev";
-  return createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 32);
-}
-
-/** Extract the best-guess client IP from request headers. */
-export function clientIp(headers: Headers): string {
-  return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers.get("x-real-ip") ||
-    "0.0.0.0"
-  );
-}

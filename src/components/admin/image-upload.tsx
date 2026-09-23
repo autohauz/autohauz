@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { UploadCloud, X, Loader2, Image as ImageIcon, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -95,12 +95,17 @@ type UploadStats = { originalKb: number; compressedKb: number };
 
 export function ImageUpload({ initialImages = [] }: { initialImages?: UploadedImage[] }) {
   const [images, setImages] = useState<UploadedImage[]>(initialImages);
-  
-  // Sync if initialImages changes from parent (e.g. Next.js router cache reusing components)
+
+  // Re-sync when the parent supplies a different set (e.g. the Next.js router
+  // cache reusing this component for another vehicle). Adjusting state during
+  // render — rather than in an effect — avoids a flash of the stale list and a
+  // cascading re-render (React docs: "Adjusting some state when a prop changes").
   const initialImagesStr = JSON.stringify(initialImages);
-  useEffect(() => {
+  const [syncedFrom, setSyncedFrom] = useState(initialImagesStr);
+  if (syncedFrom !== initialImagesStr) {
+    setSyncedFrom(initialImagesStr);
     setImages(initialImages);
-  }, [initialImagesStr]);
+  }
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UploadStats | null>(null);

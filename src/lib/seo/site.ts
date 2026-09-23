@@ -1,8 +1,9 @@
 import { optionalEnv } from "@/lib/config";
+import { site } from "@/config/site";
 
-/** Canonical site origin (no trailing slash) for SEO URLs. */
+/** Canonical site origin (no trailing slash) for SEO URLs. `NEXT_PUBLIC_APP_URL` overrides the configured domain. */
 export function siteBaseUrl(): string {
-  const raw = optionalEnv("NEXT_PUBLIC_APP_URL") || "https://www.cars-365.com.au";
+  const raw = optionalEnv("NEXT_PUBLIC_APP_URL") || site.domain;
   return raw.replace(/\/$/, "");
 }
 

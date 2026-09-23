@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireCronSecret } from "@/lib/security/cron";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
+
   const supabase = createAdminClient();
 
   // Find vehicles with tiktok_url but no tiktok_embed_html
@@ -23,9 +27,18 @@ export async function GET() {
     try {
       if (!v.tiktok_url) continue;
 
-      // Ensure it's a valid TikTok video URL before pinging oEmbed
-      if (!v.tiktok_url.includes("tiktok.com")) {
-        throw new Error("Invalid TikTok URL format");
+      // Strict host allow-list: `includes("tiktok.com")` would accept
+      // https://evil.example/?u=tiktok.com. The oEmbed endpoint is always
+      // TikTok's own, so this only protects against junk rows, but the stored
+      // HTML is untrusted input to any future renderer and must stay clean.
+      let host: string;
+      try {
+        host = new URL(v.tiktok_url).hostname.toLowerCase();
+      } catch {
+        throw new Error("Invalid TikTok URL");
+      }
+      if (!["www.tiktok.com", "tiktok.com", "vm.tiktok.com", "m.tiktok.com"].includes(host)) {
+        throw new Error("URL is not a TikTok host");
       }
 
       // Fetch oEmbed HTML

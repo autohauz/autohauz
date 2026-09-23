@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "cars365"
+project_id = "autohauz"
 
 [api]
 enabled = true
@@ -151,9 +151,9 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://car365au.vercel.app"
+site_url = "https://autohauz.com.au"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://car365au.vercel.app/", "https://car365au.vercel.app/auth/callback", "http://localhost:3000"]
+additional_redirect_urls = ["https://autohauz.com.au/", "https://autohauz.com.au/auth/callback", "http://localhost:3000", "http://localhost:3000/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -223,8 +223,9 @@ host = "email-smtp.ap-southeast-2.amazonaws.com"
 port = 465
 user = "env(SMTP_USER)"
 pass = "env(SMTP_PASS)"
-admin_email = "noreply@cars-365.com.au"
-sender_name = "Cars365"
+# Sender address for Supabase Auth emails — must be a verified identity in SES.
+admin_email = "env(EMAIL_FROM_ADDRESS)"
+sender_name = "AutoHauz"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

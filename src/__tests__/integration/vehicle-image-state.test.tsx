@@ -5,6 +5,9 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { VehicleForm } from "@/components/admin/vehicle-form";
 import React from "react";
+import type { Feature, LocationBranch } from "@/lib/domain";
+
+type VehicleFormVehicle = NonNullable<React.ComponentProps<typeof VehicleForm>["vehicle"]>;
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -46,8 +49,8 @@ vi.mock("@/lib/supabase/client", () => ({
 
 const mockMakes = [{ id: "make-1", name: "Toyota", slug: "toyota", isPopular: true }];
 const mockModels = [{ id: "model-1", makeId: "make-1", name: "Camry", slug: "camry" }];
-const mockFeatures = [];
-const mockLocations = [];
+const mockFeatures: Feature[] = [];
+const mockLocations: LocationBranch[] = [];
 
 const vehicleA = {
   id: "v-a",
@@ -67,7 +70,7 @@ const vehicleB = {
 };
 
 // Wrapper that mimics the Page rendering the component, including the key
-function PageWrapper({ vehicle }: { vehicle: any }) {
+function PageWrapper({ vehicle }: { vehicle: VehicleFormVehicle }) {
   // Use a dummy action that just returns immediately
   const mockAction = async () => {};
   
@@ -95,7 +98,7 @@ describe("VehicleForm State Isolation across Navigations", () => {
     const { rerender } = render(<PageWrapper vehicle={vehicleA} />);
     
     // Vehicle A has 2 images
-    let images = screen.queryAllByRole("img", { hidden: true });
+    const images = screen.queryAllByRole("img", { hidden: true });
     expect(images.length).toBe(2);
     expect(images[0].getAttribute("src")).toBe("https://example.com/a-1.jpg");
     expect(images[1].getAttribute("src")).toBe("https://example.com/a-2.jpg");
@@ -104,7 +107,7 @@ describe("VehicleForm State Isolation across Navigations", () => {
     rerender(<PageWrapper vehicle={vehicleB} />);
 
     // Vehicle B should have exactly 0 images
-    let newImages = screen.queryAllByRole("img", { hidden: true });
+    const newImages = screen.queryAllByRole("img", { hidden: true });
     expect(newImages.length).toBe(0);
 
     // 3. Simulate image upload for B
@@ -123,7 +126,7 @@ describe("VehicleForm State Isolation across Navigations", () => {
     rerender(<PageWrapper vehicle={vehicleA} />);
 
     // Confirm A still has exactly 2 images (unmodified)
-    let returningAImages = screen.queryAllByRole("img", { hidden: true });
+    const returningAImages = screen.queryAllByRole("img", { hidden: true });
     expect(returningAImages.length).toBe(2);
     expect(returningAImages[0].getAttribute("src")).toBe("https://example.com/a-1.jpg");
 
@@ -131,7 +134,7 @@ describe("VehicleForm State Isolation across Navigations", () => {
     rerender(<PageWrapper vehicle={vehicleBWithUpload} />);
     
     // Confirm B now has exactly 1 image
-    let returningBImages = screen.queryAllByRole("img", { hidden: true });
+    const returningBImages = screen.queryAllByRole("img", { hidden: true });
     expect(returningBImages.length).toBe(1);
     expect(returningBImages[0].getAttribute("src")).toBe("https://example.com/b-1.jpg");
   });

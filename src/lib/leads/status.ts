@@ -35,7 +35,6 @@ export const LEAD_TYPE_LABELS: Record<LeadType, string> = {
   sell: "Sell your car",
   callback: "Callback",
   general: "General",
-  waitlist: "Waitlist",
 };
 
 export const LOSS_REASONS = ["price", "sold_elsewhere", "finance_declined", "unresponsive", "other"] as const;

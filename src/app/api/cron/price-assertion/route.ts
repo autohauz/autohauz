@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/nav";
+import { getAppUrl } from "@/lib/config";
+import { requireCronSecret } from "@/lib/security/cron";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const denied = requireCronSecret(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = getAppUrl();
 
   // We only assert vehicles currently available and pushed to a channel.
   // We can just assert all available vehicles in the projection.

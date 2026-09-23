@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { leadSchema } from "@/lib/validation/lead";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { rateLimitSlidingWindow } from "@/lib/security/rate-limit-redis";
-import { checkSpam, normalizePhone, hashIp, clientIp } from "@/lib/leads/spam-check";
+import { checkSpam, normalizePhone } from "@/lib/leads/spam-check";
+import { clientIp, hashIp } from "@/lib/security/ip";
 import { notifyNewLead } from "@/lib/leads/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 

@@ -1,51 +1,52 @@
-# car365 – Premium Vehicle Marketplace
+# AutoHauz — Quality Used Cars in Australia
 
-car365 is a modern, scalable, multi-tenant marketplace connecting customers with premium local car rental operators. It enables vendors to manage their fleets, locations, and leads, while offering customers an intuitive platform to discover and book vehicles.
+AutoHauz is a modern, fast, and secure dealership platform tailored for a single Australian used-car dealership. It provides a robust public-facing vehicle listing site and a secure internal staff dashboard for inventory, leads, and invoicing management.
 
 ## Tech Stack
 - **Frontend Framework**: Next.js 16 (App Router, Server Actions)
-- **Styling**: Tailwind CSS v4, shadcn/ui, Framer Motion
-- **Database & Auth**: Supabase (PostgreSQL, Row Level Security)
-- **Search Engine**: Typesense Cloud
-- **Security**: Cloudflare Turnstile, Upstash Redis Rate Limiting
-- **Emails**: Resend
-- **Payments**: Stripe
+- **Styling**: Tailwind CSS v4 (Semantic Tokens System)
+- **Database & Auth**: Supabase (PostgreSQL, Row Level Security, MFA)
+- **Security**: Cloudflare Turnstile
+- **Emails**: AWS SES (via Nodemailer)
 
 ## Project Structure
 ```text
 src/
 ├── app/                  # Next.js App Router (pages & API routes)
-│   ├── (public)/         # SEO-friendly marketing and discovery pages
-│   ├── admin/            # Superadmin dashboard
-│   ├── api/              # Route handlers and webhooks
-│   ├── customer/         # Customer account portal
-│   └── vendor/           # Vendor fleet & lead management portal
-├── components/           # Reusable UI elements (shadcn + custom)
-└── lib/                  # Core utilities (auth, search, DB clients)
-supabase/                 # Database migrations, edge functions, config
+│   ├── (public)/         # SEO-friendly marketing and vehicle discovery pages
+│   ├── admin/            # Staff-only secure dashboard
+│   ├── api/              # Route handlers and crons
+├── components/           # Reusable UI elements (shadcn + semantic components)
+└── lib/                  # Core utilities (auth, database, invoicing, SEO)
+supabase/                 # Database migrations and edge functions
 docs/                     # Comprehensive developer & architectural documentation
 ```
 
 ## Local Development Setup
 
-1. **Clone the repository and install dependencies:**
+1. **Install dependencies:**
    ```bash
-   git clone [repo-url]
-   cd Carhire
    npm install
    ```
 
 2. **Configure Environment Variables:**
-   Copy the example environment template and populate it with your local Supabase and Typesense keys.
+   Copy the example environment template and populate it with your local Supabase keys.
    ```bash
    cp .env.example .env.local
    ```
+   Set `ADMIN_EMAIL` in `.env.local` to bootstrap the admin user.
 
-3. **Start the Development Server:**
+3. **Start Local Supabase:**
    ```bash
-   npm run dev
+   supabase start
+   supabase db push
    ```
-   The application will be available at `http://localhost:3000`.
+
+4. **Start the Development Server (Port 3100):**
+   ```bash
+   npm run dev -- -p 3100
+   ```
+   The application will be available at `http://localhost:3100`.
 
 ## Scripts
 - `npm run dev` - Starts the Next.js development server
@@ -57,10 +58,6 @@ docs/                     # Comprehensive developer & architectural documentatio
 ## Documentation
 For deep technical guides, please refer to the `/docs` directory:
 - [Architecture & System Design](docs/ARCHITECTURE.md)
-- [Codebase Guide](docs/CODEBASE_GUIDE.md)
 - [Database Schema & Migrations](docs/DATABASE.md)
 - [API Reference](docs/API.md)
 - [Deployment & Operations](docs/DEPLOYMENT.md)
-- [SEO Strategy](docs/SEO.md)
-- [Security Boundaries](docs/SECURITY.md)
-- [Contributing Guidelines](docs/CONTRIBUTING.md)

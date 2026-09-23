@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = [
     "/sell-your-car", "/trade-in", "/finance", "/about",
     "/testimonials", "/faqs", "/contact", "/how-it-works",
-    "/careers", "/press", "/legal/privacy-policy", "/legal/terms",
+    "/legal/privacy-policy", "/legal/terms", "/legal/disclaimer",
   ].map((p) => url(p, staticDate, 0.7, "monthly"));
 
   // Inventory hubs turn over daily and deserve the highest crawl priority

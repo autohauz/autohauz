@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidateTag, revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { updateTags } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { requireAdmin } from "@/lib/security/auth";
@@ -22,10 +23,9 @@ function logActivityBg(userId: string, action: string, entityId: string, diff: R
     .then(() => { /* no-op */ });
 }
 
-const revalidate = revalidateTag as (tag: string) => void;
 function revalidatePublic() {
-  revalidate("vehicles");
-  revalidate("public");
+  updateTags("vehicles");
+  updateTags("public");
 }
 
 // Coerce empty-string optionals to null before DB insert.

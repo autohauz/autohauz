@@ -4,16 +4,18 @@ import { Globe2, Mail, MessageCircle } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { buttonVariants } from "@/components/ui/button";
 import { optionalEnv } from "@/lib/config";
+import { getBusinessProfile } from "@/lib/data/business";
 import { DEFAULT_ALLOWED_COUNTRIES } from "@/lib/security/geo-restriction";
 import { cn } from "@/lib/utils";
+import { site } from "@/config/site";
 
 /**
  * Geo-restriction landing page.
  *
  * `src/proxy.ts` REWRITES (not redirects) requests from outside the served
  * regions here, so the visitor keeps the URL they asked for and there is no
- * extra round-trip. The page fetches no data, so rendering it is a pure React
- * render — a blocked request never touches Supabase.
+ * extra round-trip. The only data read is the cached business profile
+ * (contact channels); nothing here is submittable from a blocked region.
  *
  * SEO: explicitly `noindex, nofollow`. The proxy also sets `X-Robots-Tag` and
  * `Cache-Control: no-store` on the blocked response, and `robots.ts` disallows
@@ -29,12 +31,6 @@ import { cn } from "@/lib/utils";
  * does no I/O, so "dynamic" here costs only a render.
  */
 export const dynamic = "force-dynamic";
-
-/** Fallback matches the support address used by src/lib/email/ses.ts. */
-const CONTACT_EMAIL = optionalEnv("CONTACT_EMAIL_TO") ?? "support@cars-365.com.au";
-
-/** Same number the site-wide WhatsApp float and dealer JSON-LD advertise. */
-const WHATSAPP_NUMBER = "61451344477";
 
 /** ISO codes → display names, so page copy and policy can never drift apart. */
 const COUNTRY_NAMES: Record<string, string> = {
@@ -52,10 +48,10 @@ function servedRegions(): string {
 export const metadata: Metadata = {
   title: "Not available in your region",
   description:
-    "Cars365 is currently available only in Australia. Get in touch or join the waitlist to hear when we open in your country.",
+    `${site.brandName} is currently available only in Australia. Get in touch if you have a question about a vehicle.`,
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
     nocache: true,
   },
   // Clears the root layout's `canonical: "/"` — this page must never claim to
@@ -63,26 +59,29 @@ export const metadata: Metadata = {
   alternates: {},
 };
 
-export default function GeoBlockedPage() {
+export default async function GeoBlockedPage() {
+  // Contact details come from settings/env only — an unset value hides its
+  // button rather than falling back to someone else's number or inbox.
+  const business = await getBusinessProfile();
+  const contactEmail = business.email || optionalEnv("CONTACT_EMAIL_TO") || null;
+  const whatsappNumber = business.whatsapp || null;
+
   const regions = servedRegions();
-  const waitlistSubject = encodeURIComponent("Cars365 waitlist — open in my country");
-  const waitlistBody = encodeURIComponent(
-    "Hi Cars365 team,\n\nI'd like to be notified when you start serving my country.\n\nName:\nCountry:\n",
+  const contactSubject = encodeURIComponent("Enquiry from outside Australia");
+  const contactBody = encodeURIComponent(
+    `Hi ${site.brandName} team,\n\nI'm outside Australia and have a question.\n\nName:\nCountry:\nQuestion:\n`,
   );
 
   return (
-    <main className="dark bg-background text-foreground flex min-h-screen flex-col items-center justify-center px-4 py-16 text-center">
-      <BrandLogo priority className="h-[48px] w-[180px] sm:h-[56px] sm:w-[220px]" />
+    <main id="main" className="dark flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-16 text-center text-foreground">
+      <BrandLogo variant="dark" height={52} priority />
 
-      <div
-        className="mt-10 flex size-16 items-center justify-center rounded-2xl border border-yellow-400/20 bg-yellow-400/10"
-        aria-hidden="true"
-      >
-        <Globe2 className="size-8 text-yellow-400" />
+      <div className="mt-10 flex size-16 items-center justify-center rounded-full bg-accent-soft text-accent-soft-foreground" aria-hidden="true">
+        <Globe2 className="size-8" />
       </div>
 
-      <h1 className="mt-8 max-w-2xl text-2xl font-bold tracking-tight text-balance sm:text-3xl">
-        This marketplace is currently available only in {regions}.
+      <h1 className="mt-8 max-w-2xl text-balance text-2xl sm:text-3xl">
+        {site.brandName} is currently available only in {regions}.
       </h1>
 
       <p className="mt-4 max-w-lg text-base text-muted-foreground">
@@ -92,40 +91,48 @@ export default function GeoBlockedPage() {
         off and reload the page.
       </p>
 
-      {/* Contact + waitlist. Both are mailto/WhatsApp links by design: the API
-          surface stays fully closed to blocked regions, so there is nothing here
-          for an out-of-region client to submit against. */}
-      <div className="mt-10 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
-        <a
-          href={`mailto:${CONTACT_EMAIL}?subject=${waitlistSubject}&body=${waitlistBody}`}
-          className={cn(buttonVariants({ variant: "default", size: "cta" }), "gap-2")}
-        >
-          <Mail className="size-4" />
-          Join the waitlist
-        </a>
-        <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(buttonVariants({ variant: "outline", size: "cta" }), "gap-2")}
-        >
-          <MessageCircle className="size-4" />
-          Chat on WhatsApp
-        </a>
-      </div>
+      {/* Contact options are mailto/WhatsApp links by design: the API surface
+          stays fully closed to blocked regions, so there is nothing here for an
+          out-of-region client to submit against. */}
+      {contactEmail || whatsappNumber ? (
+        <div className="mt-10 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
+          {contactEmail ? (
+            <a
+              href={`mailto:${contactEmail}?subject=${contactSubject}&body=${contactBody}`}
+              className={cn(buttonVariants({ variant: "default", size: "cta" }))}
+            >
+              <Mail aria-hidden="true" />
+              Email us
+            </a>
+          ) : null}
+          {whatsappNumber ? (
+            <a
+              href={`https://wa.me/${whatsappNumber}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: "outline", size: "cta" }))}
+            >
+              <MessageCircle aria-hidden="true" />
+              Chat on WhatsApp
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
-      <p className="mt-8 text-sm text-muted-foreground">
-        Questions?{" "}
-        <a
-          href={`mailto:${CONTACT_EMAIL}`}
-          className="font-medium text-yellow-400 underline-offset-4 hover:underline"
-        >
-          {CONTACT_EMAIL}
-        </a>
-      </p>
+      {contactEmail ? (
+        <p className="mt-8 text-sm text-muted-foreground">
+          Questions?{" "}
+          <a
+            href={`mailto:${contactEmail}`}
+            className="font-medium text-accent underline-offset-4 hover:underline"
+          >
+            {contactEmail}
+          </a>
+        </p>
+      ) : null}
 
       <p className="mt-12 text-xs text-muted-foreground">
-        Cars365 — quality used cars, honestly inspected.
+        {site.brandName} — {site.tagline.toLowerCase()}.
       </p>
     </main>
   );

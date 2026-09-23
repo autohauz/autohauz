@@ -1,23 +1,28 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { Container } from "@/components/ui/container";
 
+/** Route-level loading skeleton: a header band, a page title, and a card grid. */
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-muted p-4 sm:p-6 lg:p-8 flex flex-col gap-6 pt-32 max-w-7xl mx-auto w-full">
-      <Skeleton className="h-12 w-3/4 max-w-md rounded-xl" />
-      <Skeleton className="h-6 w-1/2 max-w-sm rounded-lg" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-4 bg-card p-4 rounded-2xl border border-border shadow-sm">
-            <Skeleton className="h-48 w-full rounded-xl" />
-            <Skeleton className="h-6 w-3/4 rounded-lg" />
-            <div className="flex justify-between items-center mt-2">
-              <Skeleton className="h-5 w-20 rounded-md" />
-              <Skeleton className="h-8 w-24 rounded-lg" />
+    <div aria-busy="true" aria-label="Loading">
+      <div className="dark h-[var(--header-height)] bg-background" />
+      <Container className="py-8 lg:py-12">
+        <Skeleton variant="text" className="h-4 w-40" />
+        <Skeleton className="mt-4 h-9 w-72 max-w-full" />
+        <Skeleton variant="text" className="mt-3 h-4 w-96 max-w-full" />
+        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-lg border border-border bg-card">
+              <Skeleton className="aspect-[4/3] w-full rounded-none" />
+              <div className="space-y-3 p-4">
+                <Skeleton variant="text" className="h-5 w-3/4" />
+                <Skeleton variant="text" className="h-4 w-1/2" />
+                <Skeleton className="h-6 w-24" />
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Container>
     </div>
   );
 }

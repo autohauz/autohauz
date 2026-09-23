@@ -1,15 +1,15 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { updateTags } from "@/lib/cache";
 import { requireAdmin } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { testimonialSchema } from "@/lib/validation/content";
 
-const revalidate = revalidateTag as (tag: string) => void;
 
 function refresh() {
-  revalidate("testimonials");
-  revalidate("public");
+  updateTags("testimonials");
+  updateTags("public");
   revalidatePath("/admin/testimonials");
 }
 

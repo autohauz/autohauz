@@ -2,6 +2,7 @@ import type { CanonicalVehicle } from "../types";
 import type { ChannelAdapter, TransformResult } from "./types";
 import { evaluateReadiness } from "../readiness";
 import { mapEnum, type EnumMap } from "../enum-map";
+import { listingUrl } from "@/lib/syndication/listing-url";
 
 /**
  * Frozen headers for Meta Automotive Inventory.
@@ -102,7 +103,7 @@ export const MetaMarketplaceAdapter: ChannelAdapter = {
       id: v.stockNumber || v.vehicleId,
       title: title.slice(0, 150),
       description: description.slice(0, 5000),
-      url: `https://www.cars-365.com.au/used-cars/${v.make.toLowerCase()}/${v.model.toLowerCase()}/${v.stockNumber.toLowerCase()}`,
+      url: listingUrl(v),
       image_url: images[0] || "",
       additional_image_urls: images.slice(1).join(","),
       price: priceStr,

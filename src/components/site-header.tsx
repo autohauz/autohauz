@@ -1,110 +1,74 @@
 import Link from "next/link";
-import { Phone, ChevronDown } from "lucide-react";
+import { Phone } from "lucide-react";
 import { getMakes } from "@/lib/data/inventory";
-import { getPhoneNumbers } from "@/lib/data/settings";
+import { getBusinessProfile } from "@/lib/data/business";
+import { BrandLogo } from "@/components/brand-logo";
+import { BuyCarsMenu } from "@/components/buy-cars-menu";
 import { MobileNav } from "@/components/mobile-nav";
-import {
-  NAV_BODY_TYPES,
-  BODY_TYPE_LABELS,
-  BUDGET_BANDS,
-  bodyTypeHref,
-  budgetHref,
-  makeHref,
-} from "@/lib/nav";
+import { Container } from "@/components/ui/container";
+import { site } from "@/config/site";
 
 const PRIMARY = [
-  { href: "/sell-your-car", label: "Sell Your Car" },
+  { href: "/sell-your-car", label: "Sell your car" },
   { href: "/finance", label: "Finance" },
-  { href: "/about", label: "About Us" },
+  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 
-/** Brand wordmark. Swap for a logo asset when supplied. */
-function Wordmark() {
-  return (
-    <Link href="/" className="flex items-center gap-2 font-heading text-xl font-extrabold tracking-tight text-foreground">
-      <img src="/LOGO.png" alt="Cars365" className="h-10 w-auto object-contain" />
-    </Link>
-  );
-}
-
+/**
+ * Public header — a navy band (dark surface) with the dark logo variant, the
+ * "Buy cars" disclosure menu, primary links, the phone number when configured
+ * and one accent CTA. Sticky, 72 px, with a skip link as the first focusable.
+ */
 export async function SiteHeader() {
-  const [makes, phones] = await Promise.all([getMakes(), getPhoneNumbers()]);
-  const popularMakes = makes.filter((m) => m.isPopular).slice(0, 8);
-  const phone = phones.primary || null;
+  const [makes, business] = await Promise.all([getMakes(), getBusinessProfile()]);
+  const phone = business.phone || null;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#050505]/95 backdrop-blur-xl border-b border-white/10 shadow-2xl transition-all duration-300">
-      <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-8">
-        <Wordmark />
+    <header className="dark sticky top-0 z-[var(--z-header)] w-full border-b border-border bg-background text-foreground">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[var(--z-modal)] focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-card-foreground"
+      >
+        Skip to content
+      </a>
+      <Container className="flex h-[var(--header-height)] items-center justify-between gap-6">
+        <Link href="/" className="flex shrink-0 items-center" aria-label={`${site.brandName} home`}>
+          <BrandLogo variant="dark" height={48} priority />
+        </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex">
-          {/* Buy Cars mega-menu (CSS hover + focus-within) */}
-          <div className="group relative">
-            <Link
-              href="/used-cars"
-              className="inline-flex items-center gap-1.5 py-2 text-[15px] font-medium text-white/90 transition-all hover:text-primary"
-            >
-              Buy Cars <ChevronDown className="size-4 text-white/50 transition-transform group-hover:rotate-180 group-hover:text-primary" />
-            </Link>
-            <div className="invisible absolute left-1/2 top-full z-50 w-[600px] -translate-x-1/2 translate-y-4 rounded-xl border border-white/10 bg-[#0a0a0a] p-8 opacity-0 shadow-2xl transition-all duration-300 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
-              <div className="grid grid-cols-3 gap-8">
-                <div>
-                  <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">Popular makes</p>
-                  <ul className="space-y-1">
-                    {popularMakes.map((m) => (
-                      <li key={m.slug}>
-                        <Link href={makeHref(m.slug)} className="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white">{m.name}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">Body type</p>
-                  <ul className="space-y-1">
-                    {NAV_BODY_TYPES.map((b) => (
-                      <li key={b}>
-                        <Link href={bodyTypeHref(b)} className="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white">{BODY_TYPE_LABELS[b]}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-primary">By budget</p>
-                  <ul className="space-y-1">
-                    {BUDGET_BANDS.map((b) => (
-                      <li key={b.max}>
-                        <Link href={budgetHref(b.max)} className="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white">{b.label}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+          <BuyCarsMenu makes={makes} />
           {PRIMARY.map((item) => (
-            <Link key={item.href} href={item.href} className="text-[15px] font-medium text-white/90 transition-all hover:text-primary">
+            <Link
+              key={item.href}
+              href={item.href}
+              className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-6">
-          {phone && (
-            <a href={`tel:${phone}`} className="hidden items-center gap-2 text-[15px] font-semibold text-white hover:text-primary transition-colors lg:flex">
-              <Phone className="size-4 text-primary" /> {phone}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {phone ? (
+            <a
+              href={`tel:${phone.replace(/\s+/g, "")}`}
+              className="hidden h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted md:inline-flex"
+            >
+              <Phone className="size-4 text-accent-bright" aria-hidden="true" />
+              {phone}
             </a>
-          )}
+          ) : null}
           <Link
-            href="/sell-your-car"
-            className="hidden items-center justify-center rounded-full bg-primary px-7 py-2.5 text-[15px] font-bold text-black shadow-[0_0_15px_rgba(255,204,0,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(255,204,0,0.5)] sm:inline-flex"
+            href="/used-cars"
+            className="hidden h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover sm:inline-flex"
           >
-            Sell Your Car
+            Browse cars
           </Link>
           <MobileNav makes={makes} phone={phone} />
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

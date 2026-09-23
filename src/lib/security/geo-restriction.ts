@@ -88,10 +88,8 @@ const EXEMPT_PREFIXES = [
   "/.well-known/",
   "/api/cron/",
   "/_next/",
-  "/icons/",
+  "/brand/",
   "/images/",
-  "/splash/",
-  "/screenshots/",
 ] as const;
 
 /**

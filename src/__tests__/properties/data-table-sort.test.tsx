@@ -14,7 +14,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { PBT_CONFIG } from "./setup";
 import { DataTable } from "@/components/data-table";
 import type { DataTableColumn } from "@/components/data-table";

@@ -68,7 +68,7 @@ export function listingIndexation(basePath: string, sp: SP): Pick<Metadata, "alt
   return {
     alternates: canonical(canonicalPath),
     robots: faceted
-      ? { index: true, follow: true, googleBot: { index: true, follow: true } }
+      ? { index: false, follow: true, googleBot: { index: false, follow: true } }
       : { index: true, follow: true },
   };
 }

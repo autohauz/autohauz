@@ -8,6 +8,7 @@ import { WhatsAppCatalogAdapter, WHATSAPP_CATALOG_HEADERS } from "./adapters/wha
 import type { CanonicalVehicle } from "./types";
 import { evaluateVolumeGuard } from "./volume-guard";
 import { buildEnumMap } from "./enum-map";
+import { site } from "@/config/site";
 
 export async function runSync(
   dealerId: string, 
@@ -94,6 +95,10 @@ export async function runSync(
       regoState: v.rego_state as CanonicalVehicle["regoState"],
       make: v.make,
       model: v.model,
+      // Present once migration 0020 is applied (select("*") picks them up); null before.
+      makeSlug: v.make_slug ?? null,
+      modelSlug: v.model_slug ?? null,
+      vehicleSlug: v.vehicle_slug ?? null,
       variant: v.variant,
       badge: v.badge,
       bodyType: v.body_type as CanonicalVehicle["bodyType"],
@@ -133,7 +138,7 @@ export async function runSync(
       if (v.vin) vinCounts.set(v.vin, (vinCounts.get(v.vin) || 0) + 1);
     }
     const vinDuplicates = new Set(
-      Array.from(vinCounts.entries()).filter(([_, count]) => count > 1).map(([vin]) => vin)
+      Array.from(vinCounts.entries()).filter(([, count]) => count > 1).map(([vin]) => vin)
     );
 
     let adapter = GoogleVehicleAdsAdapter;
@@ -196,7 +201,7 @@ export async function runSync(
         continue;
       }
 
-      const res = adapter.transform(v, { vinDuplicates, storeCode: connection.external_account_id || "CARS365", enumMap });
+      const res = adapter.transform(v, { vinDuplicates, storeCode: connection.external_account_id || site.brandName.toUpperCase(), enumMap });
       
       if (res.type === "rejected") {
         rejectedCount++;

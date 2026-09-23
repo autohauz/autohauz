@@ -4,6 +4,8 @@ import * as adminSupabase from "../../lib/supabase/admin";
 import { NextRequest } from "next/server";
 import * as xlsx from "xlsx";
 
+type AdminClient = ReturnType<typeof adminSupabase.createAdminClient>;
+
 vi.mock("next/headers", () => ({
   cookies: () => ({
     getAll: () => [],
@@ -13,14 +15,21 @@ vi.mock("next/headers", () => ({
 
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
-vi.mock("@supabase/ssr", () => ({
-  createServerClient: () => ({
+// requireApiAdmin() → getCurrentUser() → lib/supabase/server createClient()
+vi.mock("../../lib/supabase/server", () => ({
+  createClient: async () => ({
     auth: {
-      getUser: async () => ({ data: { user: { id: "user-123" } }, error: null }),
+      getUser: async () => ({ data: { user: { id: "user-123", email: "staff@example.com" } }, error: null }),
     },
   }),
+}));
+
+// React's cache() is a pass-through outside a request context.
+vi.mock("react", () => ({
+  cache: <T,>(fn: T) => fn,
 }));
 
 describe("Bulk Upload Image Invariants", () => {
@@ -36,11 +45,14 @@ describe("Bulk Upload Image Invariants", () => {
     vi.spyOn(adminSupabase, "createAdminClient").mockReturnValue({
       from: (table: string) => {
         if (table === "admin_roles") {
+          // userHasAdminRoleRecord: .select().eq().eq().limit().maybeSingle()
           return {
             select: () => ({
               eq: () => ({
                 eq: () => ({
-                  maybeSingle: async () => ({ data: { role: "admin", active: true }, error: null }),
+                  limit: () => ({
+                    maybeSingle: async () => ({ data: { role: "admin", active: true }, error: null }),
+                  }),
                 }),
               }),
             }),
@@ -74,7 +86,7 @@ describe("Bulk Upload Image Invariants", () => {
         }
         return {};
       },
-    } as any);
+    } as unknown as AdminClient);
 
     // Create a mock CSV/XLSX file
     const wb = xlsx.utils.book_new();

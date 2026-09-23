@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import { getLeadList } from "@/lib/data/leads";
-import { LEAD_STATUS_LABELS, LEAD_STATUS_STYLES, LEAD_TYPE_LABELS } from "@/lib/leads/status";
+import { LeadsTable } from "./leads-table";
 import type { LeadStatus } from "@/lib/domain";
 
 export const metadata = { title: "Leads" };
@@ -41,30 +40,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="p-3">Name</th><th className="p-3">Type</th><th className="p-3">Phone</th>
-              <th className="p-3">Status</th><th className="p-3">Received</th><th className="p-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.length === 0 ? (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No leads {active !== "all" ? `with status “${active}”` : "yet"}.</td></tr>
-            ) : leads.map((l) => (
-              <tr key={l.id} className="border-b border-border last:border-0 hover:bg-muted/40">
-                <td className="p-3 font-medium text-foreground">{l.name}</td>
-                <td className="p-3 text-body">{LEAD_TYPE_LABELS[l.type]}</td>
-                <td className="p-3 tabular-nums text-body">{l.phone}</td>
-                <td className="p-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${LEAD_STATUS_STYLES[l.status]}`}>{LEAD_STATUS_LABELS[l.status]}</span></td>
-                <td className="p-3 text-muted-foreground">{formatDistanceToNow(new Date(l.createdAt), { addSuffix: true })}</td>
-                <td className="p-3 text-right"><Link href={`/admin/leads/${l.id}`} className="text-primary hover:underline">Open</Link></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <LeadsTable data={leads} activeStatus={active} />
     </div>
   );
 }

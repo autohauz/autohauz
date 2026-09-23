@@ -2,382 +2,329 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * AutoHauz token system — see DESIGN.md (the source of truth).
+ *
+ * Tier 1: literal palette (never used directly by components).
+ * Tier 2: semantic roles on :root, overridden inside `.dark` (hero, footer,
+ *         sidebar) so one set of utilities re-skins a dark surface.
+ * Tier 3: the Tailwind @theme mapping that turns roles into utilities
+ *         (bg-card, text-muted-foreground, border-input …).
+ */
+
+/* `dark:` utilities target dark surfaces, which opt in with the class. */
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Cars365 Logo Theme — NSW plate yellow and pure black. */
-  --primary: #FFCC00;          /* Yellow accents */
-  --primary-hover: #E6B800;
-  --primary-foreground: #000000; /* Black text on yellow buttons */
+  /* ── Tier 1: literals ─────────────────────────────────────────────────── */
+  --navy-950: #040f24;
+  --navy-900: #071b3d;
+  --navy-800: #0a2d61;
+  --navy-700: #0b3573;
+  --navy-600: #12469a;
+  --azure-700: #005a88;
+  --azure-600: #006da4;
+  --azure-500: #0080c0;
+  --azure-300: #5fb3e4;
+  --azure-100: #e3f2fb;
+  --silver-200: #d0e0f0;
+  --ink-900: #14213d;
+  --ink-700: #3c4a63;
+  --ink-500: #5b6980;
+  --ink-300: #b3bdcc;
+  --line-300: #7f8ca3;
+  --line-200: #d9e1ec;
+  --line-100: #eaf0f6;
+  --cloud-50: #f6f8fb;
+  --white: #ffffff;
+  --green-700: #166b47;
+  --green-100: #e3f3ea;
+  --amber-700: #8f5d0d;
+  --amber-100: #fbf0da;
+  --red-700: #a93226;
+  --red-100: #fbe7e4;
+  --white-a12: rgb(255 255 255 / 0.12);
+  --white-a06: rgb(255 255 255 / 0.06);
 
-  --accent-dark: #FFCC00;      /* Make accent sections pop with yellow */
+  /* ── Tier 2: semantic roles — light values here, dark overrides in .dark ──
+     (Declared twice on purpose: a custom property is resolved where it is
+     declared, so a light-dark()/var() token set on :root would be inherited
+     already-resolved into a dark subtree.) */
+  color-scheme: light;
 
-  /* Semantic status */
-  --success: #12b76a;
-  --warning: #f79009;
-  --danger: #e5484d;
-  --error: #e5484d;
-  --info: #FFCC00;
+  --background: var(--cloud-50);
+  --foreground: var(--ink-900);
+  --body: var(--ink-700);
+  --muted: var(--line-100);
+  --muted-foreground: var(--ink-500);
 
-  /* Neutral Scale */
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
-  --slate-950: #020617;
+  --card: var(--white);
+  --card-foreground: var(--ink-900);
+  --popover: var(--white);
+  --popover-foreground: var(--ink-900);
 
-  /* Light Theme Defaults (Fixes Admin Portal) */
-  --background: #ffffff;
-  --foreground: #09090b;
-  --body: #71717a;
-  --card: #ffffff;
-  --card-foreground: #09090b;
-  --popover: #ffffff;
-  --popover-foreground: #09090b;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #09090b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #09090b;
-  --destructive: #ef4444;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: var(--primary);
+  --primary: var(--navy-700);
+  --primary-foreground: var(--white);
+  --primary-hover: var(--navy-800);
 
-  --font-heading: var(--font-sans, "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif);
+  --accent: var(--azure-600);
+  --accent-foreground: var(--white);
+  --accent-hover: var(--azure-700);
+  --accent-bright: var(--azure-500);
+  --accent-soft: var(--azure-100);
+  --accent-soft-foreground: var(--navy-700);
 
-  /* Border Radius */
-  --radius: 0.5rem;
-  --radius-sm: 0.375rem;
+  --secondary: var(--line-100);
+  --secondary-foreground: var(--ink-900);
+
+  --border: var(--line-200);
+  --input: var(--line-300);
+  --ring: var(--azure-500);
+
+  --success: var(--green-700);
+  --success-soft: var(--green-100);
+  --warning: var(--amber-700);
+  --warning-soft: var(--amber-100);
+  --danger: var(--red-700);
+  --danger-soft: var(--red-100);
+  --info: var(--azure-600);
+  --info-soft: var(--azure-100);
+  --destructive: var(--red-700);
+  --destructive-foreground: var(--white);
+
+  /* Typography */
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --heading-stretch: 112%;
+  --text-display: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  --text-h1: clamp(1.875rem, 1.4rem + 1.6vw, 2.625rem);
+  --text-h2: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
+  --text-h3: clamp(1.125rem, 1.05rem + 0.3vw, 1.375rem);
+
+  /* Shape & depth */
+  --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-3xl: 2rem;
-}
+  --radius-xl: 1.25rem;
+  --radius: var(--radius-md);
+  --shadow-card: 0 1px 2px rgb(20 33 61 / 0.06);
+  --shadow-float: 0 12px 32px -8px rgb(20 33 61 / 0.25);
 
-.dark {
-  /* Surfaces - Sleek Black for Premium Public UI */
-  --background: #0a0a0a;
-  --foreground: #ffffff;
-  --body: #a1a1aa;
-  --card: #171717;
-  --card-foreground: #ffffff;
-  --popover: #171717;
-  --popover-foreground: #ffffff;
-  --secondary: #262626;
-  --secondary-foreground: #ffffff;
-  --muted: #262626;
-  --muted-foreground: #a1a1aa;
-  --accent: #FFCC00;
-  --accent-foreground: #000000;
-  --destructive: #e5484d;
-  --border: #262626;
-  --input: #262626;
-  --ring: var(--primary);
-}
-:root {
-  /* Premium Shadow Elevation Scale (Softer, deeper) */
-  --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.02), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.05), 0 2px 6px -2px rgb(0 0 0 / 0.03);
-  --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.06), 0 8px 12px -6px rgb(0 0 0 / 0.04);
-  --shadow-xl: 0 24px 48px -12px rgb(0 0 0 / 0.08), 0 12px 24px -8px rgb(0 0 0 / 0.04);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --tracking-heading-sm: -0.01em;
-  --tracking-heading-md: -0.02em;
-  --tracking-heading-lg: -0.03em;
-
-  /* Z-Index Scale */
+  /* Layout */
+  --container-prose: 44rem;
+  --container-page: 80rem;
+  --container-wide: 90rem;
   --z-header: 40;
   --z-sticky-cta: 50;
-  --z-whatsapp: 50;
-  --z-mobile-nav: 60;
+  --z-float: 50;
+  --z-sheet: 60;
   --z-modal: 70;
-
-  /* Header Height (dynamically set by JS, fallback value) */
-  --header-height: 116px;
-
-  /* Touch Target */
   --touch-min: 44px;
-  --touch-gap: 8px;
+  --header-height: 72px;
 
-  /* Fluid Type Scale */
-  /* Type scale tuned to SRS §12.2 (mobile → desktop endpoints). */
-  --fluid-display: clamp(2rem, 1.5rem + 2.5vw, 3rem);   /* Display 32 → 48 */
-  --fluid-h1: clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);  /* H1 28 → 40 */
-  --fluid-h2: clamp(1.5rem, 1.375rem + 0.6vw, 2rem);    /* H2 24 → 32 */
-  --fluid-h3: clamp(1.25rem, 1.2rem + 0.25vw, 1.5rem);  /* H3 20 → 24 */
+  accent-color: var(--azure-600);
 }
 
+/* Dark surface (hero, footer, sidebar, sign-in backdrop): the same roles on navy. */
+.dark {
+  color-scheme: dark;
+
+  --background: var(--navy-900);
+  --foreground: var(--white);
+  --body: var(--silver-200);
+  --muted: var(--white-a06);
+  --muted-foreground: var(--silver-200);
+
+  --card: var(--navy-800);
+  --card-foreground: var(--white);
+  --popover: var(--navy-800);
+  --popover-foreground: var(--white);
+
+  --primary: var(--white);
+  --primary-foreground: var(--navy-900);
+  --primary-hover: var(--silver-200);
+
+  --accent: var(--azure-300);
+  --accent-foreground: var(--navy-900);
+  --accent-hover: var(--white);
+  --accent-bright: var(--azure-500);
+  --accent-soft: var(--navy-600);
+  --accent-soft-foreground: var(--white);
+
+  --secondary: var(--white-a12);
+  --secondary-foreground: var(--white);
+
+  --border: var(--white-a12);
+  --input: var(--silver-200);
+
+  --success: #6fd3a3;
+  --success-soft: rgb(111 211 163 / 0.16);
+  --warning: #f2c46d;
+  --warning-soft: rgb(242 196 109 / 0.16);
+  --danger: #f19a90;
+  --danger-soft: rgb(241 154 144 / 0.16);
+  --info: var(--azure-300);
+  --info-soft: rgb(95 179 228 / 0.16);
+  --destructive: #f19a90;
+  --destructive-foreground: var(--navy-900);
+}
+
+/* ── Tier 3: Tailwind utilities ───────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-heading: var(--font-heading), ui-sans-serif, system-ui, -apple-system, sans-serif;
-
-  --animate-fade-in: fade-in 0.4s cubic-bezier(0, 0, 0.2, 1);
-  --animate-slide-up: slide-up 0.5s cubic-bezier(0, 0, 0.2, 1);
-  --animate-scale-in: scale-in 0.4s cubic-bezier(0, 0, 0.2, 1);
-
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-
-  /* Premium navy + semantic status utilities (bg-accent-dark, text-success, …) */
-  --color-accent-dark: var(--accent-dark);
   --color-body: var(--body);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-danger: var(--danger);
-  --color-info: var(--info);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  /* Brand literals for the rare structural use (hero band, OG-like panels). */
+  --color-navy-950: var(--navy-950);
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-azure-500: var(--azure-500);
+  --color-azure-300: var(--azure-300);
+  --color-azure-100: var(--azure-100);
+  --color-ink-900: var(--ink-900);
+  --color-ink-500: var(--ink-500);
+
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
-  --radius-2xl: var(--radius-2xl);
-  --radius-3xl: var(--radius-3xl);
 
-  --shadow-sm: var(--shadow-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
-  --shadow-xl: var(--shadow-xl);
-  --shadow-glass: var(--shadow-glass);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+
+  --container-prose: var(--container-prose);
+  --container-page: var(--container-page);
+  --container-wide: var(--container-wide);
+
+  --animate-pulse-skeleton: pulse-skeleton 1.4s ease-in-out infinite;
 }
 
-.dark {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
-  --primary: #FFCC00;          /* Yellow reads well on dark surfaces */
-  --primary-hover: #E6B800;
-  --primary-foreground: #000000;
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #FFCC00;
-  --accent-foreground: #000000;
-  --border: #334155;
-  --input: #334155;
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+/* Layered so Tailwind utilities (text-base, font-semibold …) can override headings. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+
+  /* Headings: the same family, set wide — echoing the extended wordmark. */
+  h1, h2, h3, .heading {
+    font-family: var(--font-heading);
+    font-stretch: var(--heading-stretch);
+    text-wrap: balance;
+  }
+  h1, .h1 { font-size: var(--text-h1); font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; }
+  h2, .h2 { font-size: var(--text-h2); font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  h3, .h3 { font-size: var(--text-h3); font-weight: 600; line-height: 1.25; font-stretch: 100%; }
+  .display { font-family: var(--font-heading); font-stretch: var(--heading-stretch); font-size: var(--text-display); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; text-wrap: balance; }
+
+  p { text-wrap: pretty; }
+
+  /* Prices, specs, invoice figures line up. */
+  .tabular, table, .price { font-variant-numeric: tabular-nums; }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  /* Focus: outline, never removed, offset so the ring sits outside the control. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (forced-colors: active) {
+    :focus-visible { outline-color: Highlight; }
+  }
+
+  /* Native controls follow the brand. */
+  input, textarea, select, button { font: inherit; }
+
+  /* Links inside prose are underlined on hover, never colour-only. */
+  .prose-links a { color: var(--accent); text-underline-offset: 3px; }
+  .prose-links a:hover { text-decoration: underline; }
+
+  /* Scrollbars (Windows / Linux; macOS uses overlay scrollbars). */
+  :root {
+    scrollbar-color: var(--ink-300) transparent;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  font-feature-settings: "rlig" 1, "calt" 1;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-size: 1rem; /* 16px minimum */
-}
-
-/* Friendly, clean typography (no extreme uppercase forcing) */
-.display {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  letter-spacing: var(--tracking-heading-lg);
-  font-size: var(--fluid-display);
-  line-height: 1.1;
-}
-
-h1, .h1 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  letter-spacing: var(--tracking-heading-lg);
-  font-size: var(--fluid-h1);
-}
-
-h2, .h2 {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  letter-spacing: var(--tracking-heading-md);
-  font-size: var(--fluid-h2);
-}
-
-h3, .h3 {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  letter-spacing: var(--tracking-heading-md);
-  font-size: var(--fluid-h3);
-}
-
-h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  letter-spacing: var(--tracking-heading-sm);
-}
-
-::selection {
-  background: var(--primary);
-  color: white;
-}
-
-*:focus-visible {
-  outline: 3px solid var(--primary);
-  outline-offset: 0px;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
-/* Hide scrollbar for horizontal scroll strips (breadcrumbs, tab bars, galleries).
-   Referenced across the app but previously undefined in Tailwind v4. */
+/* ── Utilities kept from the previous system (still referenced) ─────────── */
 @utility scrollbar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@utility font-wide { font-stretch: var(--heading-stretch); }
+
+/* The one memorable device: a thin azure rule taken from the logo's speed-lines. */
+@utility speed-line {
+  position: relative;
+  padding-bottom: 0.75rem;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 3rem;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-bright);
   }
 }
 
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes slide-in-left { from { opacity: 0; transform: translateX(-100%); } to { opacity: 1; transform: translateX(0); } }
-@keyframes pulse-skeleton { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
-@keyframes blob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
-}
-
-.animate-fade-in { animation: fade-in 0.4s cubic-bezier(0, 0, 0.2, 1); }
-.animate-slide-up { animation: slide-up 0.5s cubic-bezier(0, 0, 0.2, 1); }
-.animate-scale-in { animation: scale-in 0.4s cubic-bezier(0, 0, 0.2, 1); }
-.animate-slide-in-left { animation: slide-in-left 0.2s cubic-bezier(0, 0, 0.2, 1); }
-.animate-pulse-skeleton { animation: pulse-skeleton 1.5s ease-in-out infinite; }
-.animate-blob { animation: blob 7s infinite; }
-.animation-delay-2000 { animation-delay: 2s; }
-.animation-delay-4000 { animation-delay: 4s; }
-
-/*
- * Reduced motion (Req 11.2): when the user has enabled reduced-motion in their
- * OS settings, disable all non-essential animations and transitions. Durations
- * are collapsed to ~0 rather than removed outright so that animation/transition
- * completion callbacks still fire and final states are applied immediately.
- * Smooth scrolling is also disabled.
- */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-.img-zoom { overflow: hidden; }
-.img-zoom img { transition: transform 0.4s cubic-bezier(0, 0, 0.2, 1); }
-.img-zoom:hover img { transform: scale(1.03); }
-
-/* Clean style cards - premium lift */
-.card-lift {
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.card-lift:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: var(--shadow-xl);
-  border-color: rgba(11, 95, 255, 0.3); /* primary @ 30% */
-}
-
-/* Glassmorphism Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), var(--shadow-glass);
-}
-.dark .glass-panel {
-  background: rgba(10, 10, 10, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), var(--shadow-glass);
-}
-
-@utility bg-noise {
-  background-image: url('/noise.svg');
-  background-repeat: repeat;
-}
-
-/* Glow Badges */
-.badge-glow-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  box-shadow: 0 0 12px 0 rgba(16, 185, 129, 0.2);
-}
-.badge-glow-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  box-shadow: 0 0 12px 0 rgba(245, 158, 11, 0.2);
-}
-.badge-glow-destructive {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  box-shadow: 0 0 12px 0 rgba(239, 68, 68, 0.2);
-}
-
-.text-gradient {
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(135deg, var(--primary) 0%, var(--accent-dark) 100%);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  body.dark {
-    @apply bg-noise;
-  }
-}
-
-/* ===== Mobile Optimisation Utilities ===== */
-
-/* Touch Target Utility */
 .touch-target {
   min-width: var(--touch-min);
   min-height: var(--touch-min);
@@ -386,38 +333,27 @@ h4, h5, h6 {
   justify-content: center;
 }
 
-/* Safe Area Utilities */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top);
-}
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.safe-area-left {
-  padding-left: env(safe-area-inset-left);
-}
-.safe-area-right {
-  padding-right: env(safe-area-inset-right);
+.safe-area-top { padding-top: env(safe-area-inset-top); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-left { padding-left: env(safe-area-inset-left); }
+.safe-area-right { padding-right: env(safe-area-inset-right); }
+
+@keyframes pulse-skeleton {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
-/* Paragraph readability */
-p {
-  max-width: 75ch;
-}
-
-/* Mobile overflow prevention */
-@media (max-width: 767px) {
-  body,
-  main {
-    overflow-x: hidden;
+/* Coarse pointers get full-size targets on every control. */
+@media (pointer: coarse) {
+  button, [role="button"], a.btn, input[type="checkbox"], input[type="radio"] {
+    min-block-size: 24px;
+    min-inline-size: 24px;
   }
+}
 
-  /*
-   * Input zoom prevention (Req 4.1): iOS Safari zooms the viewport when a
-   * focused form control has a computed font-size below 16px. Enforce a
-   * 16px minimum on all text-entry controls across every form on mobile.
-   * Excludes non-text controls (checkbox/radio/range) which never zoom.
-   */
+/* Mobile: no horizontal overflow, and 16 px inputs so iOS does not zoom. */
+@media (max-width: 767px) {
+  body, main { overflow-x: hidden; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
   textarea,
   select {
@@ -425,86 +361,48 @@ p {
   }
 }
 
-/* Landscape orientation adjustments */
-@media (orientation: landscape) and (max-height: 500px) {
-  :root {
-    --header-height: 64px;
-  }
-
-  /* Reduce the site header's rendered height in landscape so the
-     ResizeObserver-driven spacer follows automatically (Req 15.2). */
-  .site-header-root .site-header-navbar {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
-  }
-
-  h1, .h1 {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  h2, .h2,
-  h3, .h3 {
-    margin-top: 0.375rem;
-    margin-bottom: 0.375rem;
-  }
-
-  section {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-  }
-
-  /* Vehicle detail gallery: cap to 50vh in mobile landscape (Req 15.3) */
-  .vehicle-gallery-frame,
-  .vehicle-gallery-frame .gallery-main-frame {
-    max-height: 50vh;
-  }
-}
-
-/* ── Finance calculator range sliders ──────────────────────────────────────
-   Yellow filled track (set inline via a linear-gradient background) plus a
-   white thumb with a yellow ring. The fill percentage is computed per-value
-   in the FinanceCalculator component. */
+/* Finance calculator sliders — brand azure, white thumb. */
 .finance-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 6px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--muted);
   outline: none;
   cursor: pointer;
-}
-.finance-range:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 40%, transparent);
 }
 .finance-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 9999px;
-  background: #ffffff;
-  border: 3px solid var(--primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  background: var(--white);
+  border: 3px solid var(--accent);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
-  margin-top: -6px; /* centre thumb on the 6px track */
+  margin-top: -7px;
 }
 .finance-range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 9999px;
-  background: #ffffff;
-  border: 3px solid var(--primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  background: var(--white);
+  border: 3px solid var(--accent);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
 }
-.finance-range::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 9999px;
-}
+.finance-range::-webkit-slider-runnable-track,
 .finance-range::-moz-range-track {
   height: 6px;
   border-radius: 9999px;
 }
 
+/* ── Reduced motion: per rule, not a global 0.01ms override ───────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-in, .animate-out, .animate-pulse-skeleton { animation: none !important; }
+  /* Spinners stay: they are essential progress feedback. */
+  *, *::before, *::after { transition-duration: 0s !important; }
+}

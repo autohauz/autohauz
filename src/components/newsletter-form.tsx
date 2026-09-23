@@ -1,57 +1,73 @@
 "use client";
 
-import { useActionState } from "react";
-import { Loader2, CheckCircle2, Send } from "lucide-react";
+import { useActionState, useId } from "react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
-async function subscribeAction(_prevState: unknown, formData: FormData) {
-  const email = formData.get("email");
-  if (!email) return { error: "Email is required" };
+type State = { ok: true } | { ok: false; error: string } | null;
 
+async function subscribe(_prev: State, formData: FormData): Promise<State> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { ok: false, error: "Enter your email address." };
   try {
-    await fetch("/api/v1/newsletter", {
+    const res = await fetch("/api/v1/newsletter", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, consent: true, source: "footer" }),
     });
-    return { success: true };
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      return { ok: false, error: json?.error?.message ?? "Could not subscribe. Please try again." };
+    }
+    return { ok: true };
   } catch {
-    return { success: true };
+    return { ok: false, error: "Network error. Please try again." };
   }
 }
 
+/** Newsletter signup; renders on a dark band so it uses semantic tokens only. */
 export function NewsletterForm() {
-  const [state, formAction, pending] = useActionState(subscribeAction, null);
+  const [state, action, pending] = useActionState(subscribe, null);
+  const id = useId();
 
-  if (state?.success) {
+  if (state?.ok) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
-        <p className="font-semibold text-emerald-300 text-sm">
-          You&apos;re in! We&apos;ll send you the freshest listings first.
-        </p>
-      </div>
+      <p role="status" className="inline-flex items-center gap-2 rounded-md border border-border bg-success-soft px-4 py-3 text-sm font-medium text-success">
+        <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
+        You&apos;re on the list. We&apos;ll email you when new cars arrive.
+      </p>
     );
   }
 
+  const error = state && !state.ok ? state.error : null;
+
   return (
-    <form action={formAction} className="flex w-full flex-col gap-3 sm:flex-row">
-      <input
-        type="email"
-        name="email"
-        placeholder="Enter your email address"
-        required
-        className="h-12 flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 text-sm text-white placeholder:text-slate-500 focus:border-yellow-400/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-yellow-400/20 transition-all"
-      />
+    <form action={action} className="flex w-full flex-col gap-3 sm:flex-row" noValidate>
+      <div className="flex-1">
+        <label htmlFor={`${id}-email`} className="sr-only">Email address</label>
+        <input
+          id={`${id}-email`}
+          type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className="h-12 w-full rounded-md border border-input bg-white px-4 text-base text-navy-900 placeholder:text-ink-500 focus-visible:border-accent-bright"
+        />
+        {error ? (
+          <p id={`${id}-error`} role="alert" className="mt-2 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-6 text-sm font-bold text-black transition-all hover:bg-yellow-300 disabled:opacity-60 active:scale-95"
+        className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md bg-accent px-6 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-60"
       >
-        {pending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Send className="size-4" />
-        )}
+        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
         {pending ? "Subscribing…" : "Subscribe"}
       </button>
     </form>

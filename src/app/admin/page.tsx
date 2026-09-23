@@ -45,6 +45,15 @@ export default async function AdminDashboardPage() {
             </div>
           </section>
 
+          {/* Invoice Quick Link (KPIs handled in the invoice dashboard) */}
+          <section>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Invoicing</h2>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <QuickAction href="/admin/invoices/new" title="Create Invoice" body="Draft a new invoice." />
+              <QuickAction href="/admin/invoices" title="View Invoices" body="Manage billing & payments." />
+            </div>
+          </section>
+
           {/* Quick actions */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <QuickAction href="/admin/inventory/new" title="Add a vehicle" body="List a new car with photos and specs." />

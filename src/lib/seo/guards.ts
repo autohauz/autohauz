@@ -51,5 +51,5 @@ export function isIndexableLanding(total: number, kind: ThinPageKind): boolean {
  */
 export function thinPageRobots(total: number, kind: ThinPageKind): RobotsDirective | undefined {
   if (isIndexableLanding(total, kind)) return undefined;
-  return { index: true, follow: true, googleBot: { index: true, follow: true } };
+  return { index: false, follow: true, googleBot: { index: false, follow: true } };
 }

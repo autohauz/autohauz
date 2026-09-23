@@ -1,31 +1,28 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribe(onChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const mediaQuery = window.matchMedia(QUERY);
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getSnapshot() {
+  return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(QUERY).matches;
+}
+
+// Server render and first client paint agree on `false`, so there is no
+// hydration mismatch; the real preference is read synchronously on mount.
+function getServerSnapshot() {
+  return false;
+}
 
 /**
- * Detects the user's OS-level `prefers-reduced-motion` preference.
- * Returns `true` if reduced motion is preferred or if matchMedia is unavailable.
- * Listens for changes and updates state reactively.
- *
- * @validates Requirements 11.2
+ * Detects the user's OS-level `prefers-reduced-motion` preference and updates
+ * reactively when it changes. Returns `false` during SSR.
  */
 export function useReducedMotion(): boolean {
-  const [prefersReduced, setPrefersReduced] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReduced(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReduced(e.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, []);
-
-  return prefersReduced;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

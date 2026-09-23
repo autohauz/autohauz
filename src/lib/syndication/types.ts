@@ -29,6 +29,10 @@ export type CanonicalVehicle = {
 
   make: string;
   model: string;
+  /** URL slugs from the projection (migration 0020); null until applied — see listing-url.ts. */
+  makeSlug: string | null;
+  modelSlug: string | null;
+  vehicleSlug: string | null;
   variant: string | null;
   badge: string | null;
   bodyType: BodyType;

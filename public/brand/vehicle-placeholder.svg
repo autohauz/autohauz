@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t">
+  <title id="t">Photo coming soon</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b3573"/>
+      <stop offset="1" stop-color="#071b3d"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <g fill="none" stroke="#4fb3e8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <path d="M170 360 L210 260 Q222 236 250 236 L520 236 Q548 236 562 258 L606 330 L660 342 Q690 348 690 380 L690 410 Q690 430 670 430 L130 430 Q110 430 110 410 L110 380 Q110 352 140 346 Z"/>
+    <path d="M250 246 L236 320 L470 320 L470 246"/>
+    <path d="M470 246 L560 320"/>
+    <circle cx="225" cy="430" r="46" fill="#071b3d"/>
+    <circle cx="575" cy="430" r="46" fill="#071b3d"/>
+    <circle cx="225" cy="430" r="18"/>
+    <circle cx="575" cy="430" r="18"/>
+  </g>
+  <text x="400" y="530" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="26" fill="#9fc9e8">Photo coming soon</text>
+</svg>

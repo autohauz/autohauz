@@ -1,29 +1,36 @@
 import Image from "next/image";
-
+import { site } from "@/config/site";
 import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {
+  /** `primary` (navy/azure on light surfaces) or `dark` (for dark surfaces). */
+  variant?: "primary" | "dark";
+  /** Rendered height in px; width follows the artwork's 2.55:1 ratio. */
+  height?: number;
   className?: string;
-  imageClassName?: string;
   priority?: boolean;
 };
 
-export function BrandLogo({
-  className,
-  imageClassName,
-  priority = false,
-}: BrandLogoProps) {
+/** Intrinsic size of the generated 480 px logo files (public/brand). */
+const LOGO_RATIO = 480 / 189;
+
+/**
+ * The AutoHauz logo, sized by height so it never distorts.
+ * Assets are produced by `scripts/brand/build-brand-assets.mjs`.
+ */
+export function BrandLogo({ variant = "primary", height = 40, className, priority = false }: BrandLogoProps) {
+  const src = variant === "dark" ? "/brand/logo-dark-480.png" : "/brand/logo-primary-480.png";
+  const width = Math.round(height * LOGO_RATIO);
   return (
-    <div className={cn("relative h-[56px] w-[220px] shrink-0", className)}>
-      <Image
-        src="/LOGO.png"
-        alt="Cars365"
-        fill
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : "auto"}
-        sizes="(max-width: 640px) 180px, 220px"
-        className={cn("object-contain", imageClassName)}
-      />
-    </div>
+    <Image
+      src={src}
+      alt={site.brandName}
+      width={width}
+      height={height}
+      priority={priority}
+      fetchPriority={priority ? "high" : "auto"}
+      className={cn("shrink-0 select-none", className)}
+      style={{ height, width }}
+    />
   );
 }

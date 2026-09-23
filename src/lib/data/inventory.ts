@@ -7,7 +7,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireEnv } from "@/lib/config";
 import { buildMediaUrl, getBodyTypeFallback } from "@/lib/media";
 import type {
-  BodyType,
   FacetCount,
   Feature,
   FeatureCategory,
@@ -83,7 +82,7 @@ function toListItem(row: RawRow, supabaseUrl: string): VehicleListItem {
   const cover = pickCover(row.vehicle_images);
   const coverUrl = cover.key
     ? buildMediaUrl(supabaseUrl, cover.key)
-    : getBodyTypeFallback(row.body_type as BodyType);
+    : getBodyTypeFallback();
   const galleryUrls = getGalleryUrls(row.vehicle_images, supabaseUrl);
   return {
     id: row.id,
@@ -350,7 +349,7 @@ export const getVehicleBySlug = async (slug: string): Promise<VehicleDetail | nu
           const media = Array.isArray(rel) ? rel[0] : rel;
           return {
             id: img.id,
-            url: media?.storage_key ? buildMediaUrl(supabaseUrl, media.storage_key) : getBodyTypeFallback(r.body_type as BodyType),
+            url: media?.storage_key ? buildMediaUrl(supabaseUrl, media.storage_key) : getBodyTypeFallback(),
             altText: img.alt_text ?? null,
             sortOrder: img.sort_order ?? 0,
             isCover: !!img.is_cover,
@@ -413,7 +412,6 @@ export const getVehicleBySlug = async (slug: string): Promise<VehicleDetail | nu
               hours: r.locations.hours ?? {},
             }
           : null,
-        tiktokEmbedHtml: null,
       };
     },
     ["vehicle-detail", slug],

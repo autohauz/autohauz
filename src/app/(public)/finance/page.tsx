@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FinancePanels } from "@/components/finance-panels";
+import { Container, PageHeader } from "@/components/ui/container";
 import { getFinanceParams, getPhoneNumbers } from "@/lib/data/settings";
 import { getVehicleLeadContext } from "@/lib/data/inventory";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -9,43 +11,47 @@ import { pageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = pageMetadata({
   path: "/finance",
-  title: "Car Finance Australia — Estimate Your Repayments",
-  description:
-    "Estimate weekly repayments with our car finance calculator and enquire about competitive Australian car finance. Indicative only, not an offer of finance.",
-  keywords: ["car finance Australia", "used car loan NSW", "car repayment calculator"],
+  title: "AutoHauz Finance Options — Estimate Your Repayments",
+  description: "Explore competitive vehicle finance solutions tailored to your lifestyle. Use our transparent calculator to estimate your weekly commitment.",
+  keywords: ["car finance Australia", "used car loan", "car repayment calculator"],
 });
 
 export const revalidate = 300;
 
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ vehicle?: string }> }) {
   const { vehicle } = await searchParams;
-  const [params, phones, ctx] = await Promise.all([
-    getFinanceParams(),
-    getPhoneNumbers(),
-    vehicle ? getVehicleLeadContext(vehicle) : Promise.resolve(null),
-  ]);
+  const [params, phones, ctx] = await Promise.all([getFinanceParams(), getPhoneNumbers(), vehicle ? getVehicleLeadContext(vehicle) : Promise.resolve(null)]);
   const phone = phones.primary || null;
   const whatsappUrl = phones.whatsapp ? buildWhatsAppUrl(phones.whatsapp, "Hi, I'd like to talk about car finance.") : null;
 
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <header className="mb-8 max-w-2xl">
-          <h1 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">Car finance made simple</h1>
-          <p className="mt-3 text-body">
-            Estimate your weekly repayments, then send us an enquiry and our finance partner will help you get
-            competitive finance{ctx ? ` on the ${ctx.title}` : ""}.
-          </p>
-        </header>
-
-        <FinancePanels
-          params={params}
-          price={ctx?.price ?? 30000}
-          vehicleId={ctx?.id}
-          phone={phone}
-          whatsappUrl={whatsappUrl}
-        />
+      <main id="main">
+        <section className="relative h-[40vh] min-h-[320px] w-full bg-[#040f24] overflow-hidden">
+          <Image
+            src="/images/heroes/finance-hero.jpg"
+            alt="Professional automotive finance consultation"
+            fill
+            priority
+            className="object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        </section>
+        
+        <Container className="pb-8 lg:pb-12 relative z-10 -mt-20">
+          <div className="mb-10 rounded-xl bg-card border border-border p-6 sm:p-8 shadow-float">
+            <PageHeader
+              title="Tailored automotive finance"
+              description={
+                <>
+                  Adjust the calculator below for a transparent estimate of your weekly repayments, then reach out to our team to discuss formal options{ctx ? ` for the ${ctx.title}` : ""}. Estimates are a guide only, not an offer of finance.
+                </>
+              }
+            />
+          </div>
+          <FinancePanels params={params} price={ctx?.price ?? 30000} vehicleId={ctx?.id} phone={phone} whatsappUrl={whatsappUrl} />
+        </Container>
       </main>
       <SiteFooter />
     </>

@@ -1,85 +1,86 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { HelpCircle, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { JsonLd } from "@/components/json-ld";
+import { FaqList } from "@/components/faq-list";
+import { Container, PageHeader } from "@/components/ui/container";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getPublishedFaqs } from "@/lib/data/content";
 import { faqPageSchema, breadcrumbSchema } from "@/lib/seo/jsonld";
 import { pageMetadata } from "@/lib/seo/metadata";
-import { FaqAccordion } from "./faq-client";
-import { FadeInItem, FadeInStagger } from "@/components/animations/hero-animations";
+import { site } from "@/config/site";
+import type { Faq } from "@/lib/domain";
 
-// Title no longer carries a manual "| Cars365" — the root layout's template
-// appends "| Cars365 Australia", so the old value rendered the brand twice.
+// The root layout's title template appends the brand, so titles stay bare.
 export const metadata: Metadata = pageMetadata({
   path: "/faqs",
   title: "Frequently Asked Questions",
-  description:
-    "Answers to common questions about buying, selling, financing, warranty, and inspections at Cars365.",
+  description: `Answers to common questions about buying, selling, finance, warranty and inspections at ${site.brandName}.`,
 });
 
 export const revalidate = 3600;
 
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export default async function FaqsPage() {
   const faqs = await getPublishedFaqs();
+  // Group by category, preserving the (category, sort_order) order from the query.
+  const groups = faqs.reduce<{ category: string; items: Faq[] }[]>((acc, f) => {
+    const last = acc[acc.length - 1];
+    if (last && last.category === f.category) last.items.push(f);
+    else acc.push({ category: f.category, items: [f] });
+    return acc;
+  }, []);
 
   return (
-    <div className="dark bg-background text-foreground min-h-screen">
+    <>
       <JsonLd schema={[faqPageSchema(faqs), breadcrumbSchema([{ name: "Home", path: "/" }, { name: "FAQs", path: "/faqs" }])]} />
       <SiteHeader />
-      
-      <main>
-        {/* Premium Hero Section */}
-        <section className="relative overflow-hidden bg-black py-20 sm:py-32 border-b border-white/5">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-primary/20 blur-[120px] rounded-full pointer-events-none opacity-50" />
-          
-          <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 text-center">
-            <FadeInStagger>
-              <FadeInItem>
-                <div className="mb-6 inline-flex size-16 items-center justify-center rounded-2xl bg-primary text-black shadow-[0_0_30px_rgba(255,204,0,0.3)]">
-                  <HelpCircle className="size-8" />
-                </div>
-              </FadeInItem>
-              <FadeInItem>
-                <h1 className="font-heading text-4xl font-black uppercase tracking-tight text-white sm:text-6xl mb-6">
-                  Got Questions? <br className="hidden sm:block" />
-                  <span className="text-primary">We&apos;ve got answers.</span>
-                </h1>
-              </FadeInItem>
-              <FadeInItem>
-                <p className="mx-auto max-w-2xl text-lg text-slate-400">
-                  Everything you need to know about buying, selling, and financing with Cars365. 
-                  Straightforward answers for a straightforward process.
-                </p>
-              </FadeInItem>
-            </FadeInStagger>
-          </div>
-        </section>
+      <main id="main" className="py-8 lg:py-12">
+        <Container width="prose">
+          <PageHeader title="Questions, answered" description="Everything people ask us about buying, selling, finance and inspections. Can't find it? Ask us directly." className="mb-8" />
 
-        {/* FAQs Section */}
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-32">
-          {faqs.length === 0 ? (
-            <p className="text-center text-lg text-slate-400">No FAQs published yet. Check back soon.</p>
+          {groups.length > 1 ? (
+            <nav aria-label="Question categories" className="mb-8 flex flex-wrap gap-2">
+              {groups.map((g) => (
+                <a key={g.category} href={`#${slugify(g.category)}`} className="inline-flex min-h-8 items-center rounded-sm bg-accent-soft px-3 text-sm font-medium text-accent-soft-foreground hover:bg-azure-100/70">
+                  {g.category}
+                </a>
+              ))}
+            </nav>
+          ) : null}
+
+          {groups.length === 0 ? (
+            <EmptyState title="No questions published yet" description="We're writing them now. In the meantime, ask us anything." action={{ label: "Contact us", href: "/contact" }} />
           ) : (
-            <FaqAccordion faqs={faqs} />
+            <div className="space-y-12">
+              {groups.map((g) => (
+                <section key={g.category} id={slugify(g.category)} aria-labelledby={`faq-${slugify(g.category)}`} className="scroll-mt-24">
+                  <h2 id={`faq-${slugify(g.category)}`} className="text-xl">
+                    {g.category}
+                  </h2>
+                  <FaqList faqs={g.items} name={`faq-${slugify(g.category)}`} className="mt-4" />
+                </section>
+              ))}
+            </div>
           )}
 
-          {/* Contact Call to action */}
-          <div className="mt-32 max-w-3xl mx-auto rounded-3xl border border-white/10 bg-black p-10 sm:p-14 text-center transition-colors hover:border-primary/50 relative overflow-hidden group">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/10 blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-            <h3 className="relative z-10 font-heading text-3xl font-bold text-white mb-4">Still need help?</h3>
-            <p className="relative z-10 text-lg text-slate-400 mb-8 max-w-lg mx-auto">
-              If you couldn&apos;t find what you&apos;re looking for, our team is ready to assist you directly.
-            </p>
-            <Link href="/contact" className="relative z-10 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-8 text-lg font-bold text-black transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,204,0,0.2)]">
-              Get in touch <ArrowRight className="size-5" />
-            </Link>
+          <div className="mt-16 rounded-lg border border-border bg-card p-6 sm:p-8">
+            <h2 className="text-xl">Still have a question?</h2>
+            <p className="mt-2 text-body">Call, WhatsApp or send us a message — we reply during business hours.</p>
+            <ButtonLink href="/contact" className="mt-5">
+              Contact us
+            </ButtonLink>
           </div>
-        </section>
+        </Container>
       </main>
-      
       <SiteFooter />
-    </div>
+    </>
   );
 }

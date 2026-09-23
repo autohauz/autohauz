@@ -1,7 +1,10 @@
 import { siteBaseUrl, absoluteUrl } from "@/lib/seo/site";
 import { BODY_TYPE_LABELS, DRIVE_LABELS, FUEL_LABELS, TRANSMISSION_LABELS } from "@/lib/nav";
-import { resolveSocialUrl, SOCIAL_URLS } from "@/lib/social-links";
-import type { VehicleDetail, VehicleListItem, Testimonial, Faq, LocationBranch } from "@/lib/domain";
+import { socialProfiles } from "@/lib/social-links";
+import { site } from "@/config/site";
+import { seo } from "@/config/seo";
+import { hasAddress, type BusinessProfile } from "@/config/business";
+import type { VehicleDetail, VehicleListItem, Faq } from "@/lib/domain";
 
 /** JSON-LD builders (SRS §16.4). All return plain objects; render with <JsonLd>. */
 
@@ -101,16 +104,15 @@ export function websiteSchema() {
     "@type": "WebSite",
     "@id": WEBSITE_ID,
     url: base,
-    name: "Cars365",
-    description:
-      "Quality used cars for sale in Australia — inspected, honestly priced, with finance and trade-ins available.",
+    name: site.brandName,
+    description: seo.defaultDescription,
     publisher: { "@id": ORGANIZATION_ID },
-    inLanguage: "en-AU",
+    inLanguage: site.locale,
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${base}/used-cars?q={search_term_string}`,
+        urlTemplate: `${base}${seo.searchPath}?${seo.searchParam}={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -120,66 +122,45 @@ export function websiteSchema() {
 /**
  * Brand Organization entity powering the knowledge panel.
  *
- * Replaces the dead rental-era builder, whose description advertised "verified
- * car rental operators" — the wrong business entirely for a used-car dealership
- * and actively misleading to an entity-matching crawler.
+ * Deliberately carries NO `aggregateRating`: Google excludes self-serving
+ * review markup on Organization/LocalBusiness from rich results, and the only
+ * figures we hold are dealer-entered. Contact details and social profiles are
+ * emitted only when configured.
  */
-export function organizationSchema(input: {
-  phone?: string | null;
-  email?: string | null;
-  rating?: number | null;
-  reviewCount?: number | null;
-}) {
+export function organizationSchema(business: BusinessProfile) {
   const base = siteBaseUrl();
-  // resolveSocialUrl treats empty/whitespace/"#" env values as unset so a
-  // placeholder can't shadow (or drop) the real brand profile URL.
-  const sameAs = [
-    resolveSocialUrl(process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL, SOCIAL_URLS.facebook),
-    resolveSocialUrl(process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN_URL, SOCIAL_URLS.linkedin),
-    resolveSocialUrl(process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL, SOCIAL_URLS.instagram),
-    resolveSocialUrl(process.env.NEXT_PUBLIC_SOCIAL_X_URL),
-  ].filter((url): url is string => typeof url === "string" && url.length > 0);
+  const sameAs = socialProfiles(business.social).map((p) => p.url);
+  const name = business.tradingName || site.brandName;
+  const phone = business.phone || business.whatsapp;
 
   return {
     "@context": CONTEXT,
     "@type": "Organization",
     "@id": ORGANIZATION_ID,
-    name: "Cars365",
-    legalName: "Cars 365",
+    name,
+    ...(business.legalName ? { legalName: business.legalName } : {}),
     url: base,
     logo: {
       "@type": "ImageObject",
-      url: `${base}/icons/icon-512.png`,
+      url: `${base}${site.assets.icon512}`,
       width: 512,
       height: 512,
     },
-    image: `${base}/og-image.jpg`,
-    description:
-      "Cars365 sells quality, inspected used cars in Lansvale, NSW — transparent pricing, finance and trade-ins, serving buyers across Sydney and Australia.",
-    areaServed: { "@type": "Country", name: "Australia" },
-    ...(input.phone
+    image: `${base}${seo.ogImage}`,
+    description: seo.defaultDescription,
+    areaServed: { "@type": "Country", name: site.country },
+    ...(phone
       ? {
           contactPoint: {
             "@type": "ContactPoint",
-            telephone: input.phone,
+            telephone: phone,
             contactType: "sales",
-            areaServed: "AU",
-            availableLanguage: ["en-AU"],
+            areaServed: site.countryCode,
+            availableLanguage: [site.locale],
           },
         }
       : {}),
-    ...(input.email ? { email: input.email } : {}),
-    ...(input.rating && input.reviewCount
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: input.rating,
-            reviewCount: input.reviewCount,
-            bestRating: 5,
-            worstRating: 1,
-          },
-        }
-      : {}),
+    ...(business.email ? { email: business.email } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
@@ -332,86 +313,45 @@ function openingHours(hours: Record<string, string> | null | undefined): string[
 }
 
 /**
- * The physical dealership (LocalBusiness). Distinct from the brand
- * `organizationSchema` and linked to it via `parentOrganization`, so Google
- * resolves one brand with one storefront rather than two rival organisations.
- * This is what competes in the Australian local pack for "used car dealer near me".
+ * The physical dealership (AutoDealer, a LocalBusiness). Distinct from the
+ * brand `organizationSchema` and linked to it via `parentOrganization`, so
+ * Google resolves one brand with one storefront.
+ *
+ * Address, geo and opening hours are emitted ONLY when the client has entered
+ * real premises in Admin → Settings — a LocalBusiness with an invented address
+ * is a spam-policy violation, not an SEO win. No review aggregate (see
+ * organizationSchema).
  */
-export function autoDealerSchema(input: {
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  rating?: number | null;
-  reviewCount?: number | null;
-  location?: LocationBranch | null;
-  /** Advertised inventory price band, e.g. "$$" or "$5,000-$60,000". */
-  priceRange?: string | null;
-}) {
+export function autoDealerSchema(business: BusinessProfile) {
   const base = siteBaseUrl();
-  const loc = input.location;
-  const hours = openingHours(loc?.hours);
+  const hours = openingHours(business.hours as Record<string, string>);
+  const a = business.address;
   return {
     "@context": CONTEXT,
     "@type": "AutoDealer",
     "@id": LOCAL_BUSINESS_ID,
-    name: input.name,
+    name: business.tradingName || site.brandName,
     url: base,
-    image: `${base}/og-image.jpg`,
-    logo: `${base}/icons/icon-512.png`,
+    image: `${base}${seo.ogImage}`,
+    logo: `${base}${site.assets.icon512}`,
     parentOrganization: { "@id": ORGANIZATION_ID },
-    currenciesAccepted: "AUD",
-    ...(input.priceRange ? { priceRange: input.priceRange } : {}),
-    ...(hours.length > 0 ? { openingHours: hours } : {}),
-    areaServed: { "@type": "Country", name: "Australia" },
-    ...(input.email ? { email: input.email } : {}),
-    ...(loc?.phone || input.phone ? { telephone: loc?.phone ?? input.phone } : {}),
-    ...(loc
+    currenciesAccepted: site.currency,
+    areaServed: { "@type": "Country", name: site.country },
+    ...(business.email ? { email: business.email } : {}),
+    ...(business.phone ? { telephone: business.phone } : {}),
+    ...(hasAddress(a)
       ? {
           address: {
             "@type": "PostalAddress",
-            streetAddress: loc.address,
-            addressLocality: loc.city,
-            addressRegion: loc.state,
-            postalCode: loc.postcode ?? undefined,
-            addressCountry: "AU",
+            streetAddress: a.street,
+            addressLocality: a.suburb,
+            addressRegion: a.state,
+            ...(a.postcode ? { postalCode: a.postcode } : {}),
+            addressCountry: site.countryCode,
           },
-          ...(loc.lat && loc.lng ? { geo: { "@type": "GeoCoordinates", latitude: loc.lat, longitude: loc.lng } } : {}),
+          ...(hours.length > 0 ? { openingHours: hours } : {}),
         }
-      : {
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: "16 Hollywood Dr",
-            addressLocality: "Lansvale",
-            addressRegion: "NSW",
-            postalCode: "2166",
-            addressCountry: "AU",
-          }
-        }),
-    ...(input.rating && input.reviewCount
-      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: input.rating, reviewCount: input.reviewCount } }
       : {}),
-  };
-}
-
-export function reviewsAggregateSchema(testimonials: Testimonial[]) {
-  if (testimonials.length === 0) return null;
-  const avg = testimonials.reduce((a, t) => a + t.rating, 0) / testimonials.length;
-  return {
-    "@context": CONTEXT,
-    "@type": "Product",
-    name: "Cars365 used cars",
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: Math.round(avg * 10) / 10,
-      reviewCount: testimonials.length,
-    },
-    review: testimonials.slice(0, 10).map((t) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: t.customerName },
-      reviewRating: { "@type": "Rating", ratingValue: t.rating, bestRating: 5 },
-      reviewBody: t.quote,
-      ...(t.reviewDate ? { datePublished: t.reviewDate } : {}),
-    })),
   };
 }
 
@@ -425,6 +365,6 @@ export function articleSchema(input: { title: string; path: string; publishedAt?
     ...(input.image ? { image: input.image } : {}),
     ...(input.publishedAt ? { datePublished: input.publishedAt } : {}),
     ...(input.author ? { author: { "@type": "Person", name: input.author } } : {}),
-    publisher: { "@type": "Organization", name: "Cars365" },
+    publisher: { "@id": ORGANIZATION_ID },
   };
 }

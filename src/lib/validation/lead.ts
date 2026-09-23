@@ -103,14 +103,6 @@ export const generalEnquirySchema = leadEnvelope.extend({
   subject: z.enum(["general", "buying", "selling", "finance", "feedback"]).optional(),
 });
 
-export const waitlistSchema = leadEnvelope.extend({
-  type: z.literal("waitlist"),
-  vehicleId: z.string().uuid().optional(),
-  makeInterest: z.string().trim().max(80).optional(),
-  modelInterest: z.string().trim().max(80).optional(),
-  budgetMax: z.coerce.number().nonnegative().optional(),
-});
-
 export const leadSchema = z.discriminatedUnion("type", [
   vehicleEnquirySchema,
   inspectionSchema,
@@ -119,7 +111,6 @@ export const leadSchema = z.discriminatedUnion("type", [
   sellYourCarSchema,
   callbackSchema,
   generalEnquirySchema,
-  waitlistSchema,
 ]);
 
 export type LeadInput = z.infer<typeof leadSchema>;

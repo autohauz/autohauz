@@ -1,6 +1,7 @@
 import type { CanonicalVehicle } from "../types";
 import type { ChannelAdapter, TransformResult } from "./types";
 import { evaluateReadiness } from "../readiness";
+import { listingUrl } from "@/lib/syndication/listing-url";
 
 /**
  * Meta Commerce Catalog (Standard Product) for WhatsApp.
@@ -58,7 +59,7 @@ export const WhatsAppCatalogAdapter: ChannelAdapter = {
       availability: "in stock",
       condition: "used",
       price: priceStr,
-      link: `https://www.cars-365.com.au/used-cars/${v.make.toLowerCase()}/${v.model.toLowerCase()}/${v.stockNumber.toLowerCase()}`,
+      link: listingUrl(v),
       image_link: image,
       brand: v.make
     };

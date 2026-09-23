@@ -6,24 +6,14 @@
  * Supabase client instance, and provides body-type stock fallbacks so a card is
  * never broken while inventory photography is being loaded.
  */
-import type { BodyType } from "@/lib/domain";
-
 const MEDIA_BUCKET = "media";
 
-const BODY_TYPE_FALLBACK: Record<BodyType, string> = {
-  sedan: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80",
-  suv: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=800&q=80",
-  hatch: "https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=800&q=80",
-  ute: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-  wagon: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-  coupe: "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80",
-  convertible: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
-  van: "https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=800&q=80",
-  people_mover: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
-};
-
-const GENERIC_FALLBACK =
-  "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80";
+/**
+ * Neutral, self-hosted "photo coming soon" artwork. Stock photography was
+ * removed (rights unknown, and a random SUV photo on a listing with no photos
+ * misrepresents the car).
+ */
+export const VEHICLE_PLACEHOLDER = "/brand/vehicle-placeholder.svg";
 
 /** Direct public URL for a media_assets.storage_key in the `media` bucket. */
 export function buildMediaUrl(supabaseUrl: string, storageKey: string): string {
@@ -35,7 +25,27 @@ export function buildMediaUrl(supabaseUrl: string, storageKey: string): string {
   return `${baseUrl}/storage/v1/object/public/${MEDIA_BUCKET}/${encodedKey}`;
 }
 
-/** Body-type stock fallback (never a broken image). */
-export function getBodyTypeFallback(bodyType?: BodyType | null): string {
-  return (bodyType && BODY_TYPE_FALLBACK[bodyType]) ?? GENERIC_FALLBACK;
+const BODY_TYPE_IMAGES: Record<string, string> = {
+  sedan: "/brand/body-types/sedan.jpg",
+  suv: "/brand/body-types/suv.jpg",
+  hatch: "/brand/body-types/hatch.jpg",
+  ute: "/brand/body-types/ute.jpg",
+  wagon: "/brand/body-types/wagon.jpg",
+  coupe: "/brand/body-types/coupe.jpg",
+  convertible: "/brand/body-types/convertible.jpg",
+  van: "/brand/body-types/van.jpg",
+  people_mover: "/brand/body-types/people_mover.jpg",
+};
+
+/** Dedicated image getter for Browse By Body Type cards. */
+export function getBodyTypeCardImage(bodyType: string): string {
+  if (bodyType && BODY_TYPE_IMAGES[bodyType.toLowerCase()]) {
+    return BODY_TYPE_IMAGES[bodyType.toLowerCase()];
+  }
+  return "/brand/body-types/suv.jpg";
+}
+
+/** Fallback for inventory vehicles with no uploaded photos (never misrepresents a vehicle with dummy stock photos). */
+export function getBodyTypeFallback(): string {
+  return VEHICLE_PLACEHOLDER;
 }

@@ -33,19 +33,15 @@ export function FinancePanels({
   }, []);
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
       <FinanceCalculator params={params} price={price} onChange={handleChange} />
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="font-heading text-lg font-bold text-foreground">Enquire about finance</h2>
-        <p className="mb-4 mt-1 text-sm text-muted-foreground">A specialist will contact you — no obligation.</p>
-        <FinanceForm
-          vehicleId={vehicleId}
-          phone={phone}
-          whatsappUrl={whatsappUrl}
-          deposit={linked.deposit}
-          weekly={linked.weekly}
-        />
-      </div>
+      <section aria-labelledby="finance-enquiry" className="rounded-lg border border-border bg-card p-5 sm:p-6">
+        <h2 id="finance-enquiry" className="text-lg font-semibold">
+          Enquire about finance
+        </h2>
+        <p className="mb-5 mt-1 text-sm text-body">We&apos;ll come back to you with options — no obligation.</p>
+        <FinanceForm vehicleId={vehicleId} phone={phone} whatsappUrl={whatsappUrl} deposit={linked.deposit} weekly={linked.weekly} />
+      </section>
     </div>
   );
 }

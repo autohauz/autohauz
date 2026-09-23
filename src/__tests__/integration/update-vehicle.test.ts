@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { updateVehicle } from "@/app/admin/inventory/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 // Mock auth
 vi.mock("@/lib/security/auth", () => ({
   requireAdmin: vi.fn().mockResolvedValue({ id: "admin-123" }),
@@ -15,6 +17,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 // Mock next/cache
 vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -25,14 +28,14 @@ describe("updateVehicle", () => {
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
         select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }), in: vi.fn().mockResolvedValue({ data: [], error: null }) }),
         insert: vi.fn().mockImplementation(() => {
-          const res: any = Promise.resolve({ data: [{ id: "new-media-id", storage_key: "vehicles/test.webp" }], error: null });
+          const res = Promise.resolve({ data: [{ id: "new-media-id", storage_key: "vehicles/test.webp" }], error: null }) as Promise<unknown> & { select?: unknown };
           res.select = vi.fn().mockResolvedValue({ data: [{ id: "new-media-id", storage_key: "vehicles/test.webp" }], error: null });
           return res;
         }),
         delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
       }),
     };
-    (createAdminClient as any).mockReturnValue(mockSupabase);
+    vi.mocked(createAdminClient).mockReturnValue(mockSupabase as unknown as AdminClient);
 
     const formData = new FormData();
     formData.append("id", "123e4567-e89b-12d3-a456-426614174000"); // Valid UUID

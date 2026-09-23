@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,7 +61,7 @@ export async function markLeadSpam(leadId: string) {
 }
 
 export async function deleteLead(leadId: string): Promise<{ error?: string; ok?: boolean }> {
-  const user = await requireAdmin();
+  await requireAdmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("leads").delete().eq("id", leadId);
   if (error) return { error: error.message };

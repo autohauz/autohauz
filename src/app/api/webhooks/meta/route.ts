@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { env } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -8,7 +9,12 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.META_VERIFY_TOKEN || "cars365-meta-verify-token";
+  // No default: an unset verify token must fail the handshake, never pass it.
+  const verifyToken = env.META_WEBHOOK_VERIFY_TOKEN ?? process.env.META_VERIFY_TOKEN;
+
+  if (!verifyToken) {
+    return NextResponse.json({ error: "Webhook verify token not configured" }, { status: 503 });
+  }
 
   if (mode === "subscribe" && token === verifyToken) {
     return new NextResponse(challenge, { status: 200 });

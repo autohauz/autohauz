@@ -2,6 +2,7 @@ import type { CanonicalVehicle } from "../types";
 import type { ChannelAdapter, TransformResult } from "./types";
 import { evaluateReadiness } from "../readiness";
 import { mapEnum, type EnumMap } from "../enum-map";
+import { listingUrl } from "@/lib/syndication/listing-url";
 
 /**
  * F10: Frozen headers for Google Vehicle Ads.
@@ -106,7 +107,7 @@ export const GoogleVehicleAdsAdapter: ChannelAdapter = {
       id: v.stockNumber || v.vehicleId,
       title: title.slice(0, 150), // F29: title limit
       description: description.slice(0, 5000),
-      link: `https://www.cars-365.com.au/used-cars/${v.make.toLowerCase()}/${v.model.toLowerCase()}/${v.stockNumber.toLowerCase()}`,
+      link: listingUrl(v),
       image_link: images[0] || "",
       additional_image_link: images.slice(1).join(","),
       price: priceStr,

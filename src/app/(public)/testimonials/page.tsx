@@ -1,88 +1,100 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { Star, Quote } from "lucide-react";
+import { Star } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { JsonLd } from "@/components/json-ld";
+import { ListingBreadcrumbs } from "@/components/listing-breadcrumbs";
+import { Container, PageHeader } from "@/components/ui/container";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getApprovedTestimonials } from "@/lib/data/content";
-import { getCompanyProfile } from "@/lib/data/settings";
-import { reviewsAggregateSchema, breadcrumbSchema } from "@/lib/seo/jsonld";
+import { getBusinessProfile } from "@/lib/data/business";
+import { hasReviews } from "@/config/business";
 import { pageMetadata } from "@/lib/seo/metadata";
+import type { TestimonialSource } from "@/lib/domain";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = pageMetadata({
   path: "/testimonials",
-  title: "Customer Reviews & Testimonials",
-  description:
-    "Real stories from customers who bought their car with us — honest inspections, fair pricing, and a team that answers fast.",
+  title: "Customer Reviews",
+  description: "What people say about buying a car with us — honest inspections, fair pricing and straight answers.",
 });
 
 export const revalidate = 3600;
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <div className="flex gap-0.5" aria-label={`${rating} out of 5 stars`}>
+    <span className="inline-flex gap-0.5" role="img" aria-label={`${rating} out of 5 stars`}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className={i < rating ? "size-4 fill-primary text-primary" : "size-4 text-muted-foreground/30"} />
+        <Star key={i} className={cn("size-4", i < rating ? "fill-accent-bright text-accent-bright" : "text-border")} aria-hidden="true" />
       ))}
-    </div>
+    </span>
   );
 }
 
-export default async function TestimonialsPage() {
-  const [testimonials, company] = await Promise.all([
-    getApprovedTestimonials(60),
-    getCompanyProfile(),
-  ]);
+const SOURCE_LABELS: Record<TestimonialSource, string> = { google: "Google review", facebook: "Facebook review", direct: "Customer review" };
 
-  const rating = company.google_rating as number | undefined;
-  const reviewCount = company.google_review_count as number | undefined;
-  const aggregate = reviewsAggregateSchema(testimonials);
+export default async function TestimonialsPage() {
+  const [testimonials, business] = await Promise.all([getApprovedTestimonials(60), getBusinessProfile()]);
+
+  // Only genuine, staff-entered review figures are shown — never a fallback,
+  // and no AggregateRating markup (self-serving review schema is ineligible).
+  const showRating = hasReviews(business);
 
   return (
     <>
-      <JsonLd schema={[breadcrumbSchema([{ name: "Home", path: "/" }, { name: "Testimonials", path: "/testimonials" }]), ...(aggregate ? [aggregate] : [])]} />
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <nav className="mb-4 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground">Home</Link> <span aria-hidden>/</span> <span className="text-foreground">Testimonials</span>
-        </nav>
-        <div className="max-w-2xl">
-          <h1 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">What our customers say</h1>
-          <p className="mt-3 text-body">
-            {rating ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 font-bold text-foreground"><Star className="size-4 fill-primary text-primary" />{rating}</span>
-                {reviewCount ? <span className="text-muted-foreground">from {reviewCount.toLocaleString()} reviews</span> : null}
-              </span>
-            ) : "Honest feedback from real buyers."}
-          </p>
-        </div>
+      <main id="main" className="py-8 lg:py-12">
+        <Container>
+          <PageHeader
+            above={<ListingBreadcrumbs trail={[["Reviews", "/testimonials"]]} />}
+            title="What our customers say"
+            description={
+              showRating ? (
+                <span className="inline-flex flex-wrap items-center gap-x-2">
+                  <Star className="size-4 fill-accent-bright text-accent-bright" aria-hidden="true" />
+                  <span className="font-semibold text-foreground">{business.googleRating}</span>
+                  <span>from {business.googleReviewCount?.toLocaleString("en-AU")} Google reviews</span>
+                </span>
+              ) : (
+                "Real feedback from people who bought a car here."
+              )
+            }
+            className="mb-10"
+          />
 
-        {testimonials.length === 0 ? (
-          <p className="mt-10 text-muted-foreground">No testimonials published yet.</p>
-        ) : (
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {testimonials.map((t) => (
-              <figure key={t.id} className="flex flex-col rounded-2xl border border-border bg-card p-6">
-                <Quote className="size-6 text-primary/60" />
-                <blockquote className="mt-3 flex-1 text-body">{t.quote}</blockquote>
-                <figcaption className="mt-4 flex items-center justify-between border-t border-border pt-4">
-                  <span className="font-semibold text-foreground">{t.customerName}</span>
-                  <Stars rating={t.rating} />
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        )}
+          {testimonials.length === 0 ? (
+            <EmptyState title="No reviews published yet" description="We'll add customer reviews as they come in." action={{ label: "Browse cars", href: "/used-cars" }} />
+          ) : (
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {testimonials.map((t) => (
+                <li key={t.id} className="flex">
+                  <figure className="flex w-full flex-col rounded-lg border border-border bg-card p-6">
+                    <Stars rating={t.rating} />
+                    <blockquote className="mt-4 flex-1 leading-relaxed text-body">“{t.quote}”</blockquote>
+                    <figcaption className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4 text-sm">
+                      <span className="font-semibold text-foreground">{t.customerName}</span>
+                      <span className="text-muted-foreground">
+                        {SOURCE_LABELS[t.source]}
+                        {t.reviewDate ? `, ${new Date(t.reviewDate).toLocaleDateString("en-AU", { month: "short", year: "numeric" })}` : ""}
+                      </span>
+                    </figcaption>
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          )}
 
-        <div className="mt-12 rounded-2xl border border-border bg-card p-8 text-center">
-          <h2 className="font-heading text-xl font-bold text-foreground">Ready to find your next car?</h2>
-          <p className="mx-auto mt-2 max-w-md text-body">Browse our inspected inventory or get in touch — we reply fast.</p>
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <Link href="/used-cars" className="inline-flex h-11 items-center rounded-xl bg-primary px-6 font-bold text-primary-foreground hover:bg-primary-hover">Browse cars</Link>
-            <Link href="/contact" className="inline-flex h-11 items-center rounded-xl border border-border px-6 font-semibold text-foreground hover:bg-muted">Contact us</Link>
+          <div className="mt-16 rounded-lg border border-border bg-card p-6 text-center sm:p-8">
+            <h2 className="text-xl">Ready to find your next car?</h2>
+            <p className="mx-auto mt-2 max-w-md text-body">Browse the current stock or get in touch — we reply during business hours.</p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <ButtonLink href="/used-cars">Browse cars</ButtonLink>
+              <ButtonLink href="/contact" variant="outline">
+                Contact us
+              </ButtonLink>
+            </div>
           </div>
-        </div>
+        </Container>
       </main>
       <SiteFooter />
     </>

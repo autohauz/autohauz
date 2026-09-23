@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientIp } from "@/lib/security/rate-limit";
+import { clientIp } from "@/lib/security/ip";
 import { rateLimitSlidingWindow } from "@/lib/security/rate-limit-redis";
 
 export const runtime = "nodejs";

@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorState } from "@/components/error-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 export default function AdminDashboardError({
   error,

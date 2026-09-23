@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { newsletterSchema } from "@/lib/validation/newsletter";
 import { rateLimitSlidingWindow } from "@/lib/security/rate-limit-redis";
-import { checkSpam, hashIp, clientIp } from "@/lib/leads/spam-check";
+import { checkSpam } from "@/lib/leads/spam-check";
+import { clientIp, hashIp } from "@/lib/security/ip";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
+/**
+ * Newsletter signup → `newsletter_subscribers`.
+ *
+ * Subscribers are NOT leads: they have no name, phone or enquiry, so they must
+ * never appear in the sales pipeline. The table is dedicated to this purpose
+ * (migration 0007) and is staff-read-only under RLS, so writes go through the
+ * service-role client after validation + rate limiting + honeypot.
+ *
+ * Idempotent on email: re-subscribing an existing address is a no-op success,
+ * and re-subscribing an unsubscribed address clears `unsubscribed_at`.
+ */
 export async function POST(request: NextRequest) {
   let json: unknown;
   try {
@@ -32,31 +44,20 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
-  
-  // Idempotent on email: check if they already exist as a waitlist lead
-  const { data: existing } = await supabase
-    .from("leads")
-    .select("id")
-    .eq("type", "waitlist")
-    .eq("email", email)
-    .maybeSingle();
+  const { error } = await supabase
+    .from("newsletter_subscribers")
+    .upsert(
+      {
+        email,
+        source: source ?? "footer",
+        consent_at: new Date().toISOString(),
+        unsubscribed_at: null,
+      },
+      { onConflict: "email" },
+    );
 
-  if (!existing) {
-    const { error } = await supabase
-      .from("leads")
-      .insert({
-        type: "waitlist",
-        name: "Newsletter Subscriber",
-        phone: "N/A",
-        email: email,
-        source_url: request.headers.get("referer") ?? null,
-        ip_hash: ipHash,
-        payload: { source: source ?? "footer" }
-      });
-      
-    if (error) {
-      return NextResponse.json({ data: null, error: { message: "Could not subscribe." } }, { status: 500 });
-    }
+  if (error) {
+    return NextResponse.json({ data: null, error: { message: "Could not subscribe." } }, { status: 500 });
   }
 
   return NextResponse.json({ data: { subscribed: true }, error: null }, { status: 200 });
