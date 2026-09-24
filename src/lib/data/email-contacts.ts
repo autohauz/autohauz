@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EmailContact, EmailSegment } from "@/lib/domain";
 
-type RawRow = Record<string, any>;
+type RawRow = Record<string, unknown>;
 
 export const getEmailContacts = unstable_cache(
   async (

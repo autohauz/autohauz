@@ -37,8 +37,8 @@ export function EmailCampaignForm({
         const res = await createEmailCampaign(formData);
         if (res.error) throw new Error(res.error);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsPending(false);
     }

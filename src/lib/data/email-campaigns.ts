@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EmailCampaign, EmailTemplate } from "@/lib/domain";
 
-type RawRow = Record<string, any>;
+type RawRow = Record<string, unknown>;
 
 export const getEmailTemplates = unstable_cache(
   async (): Promise<EmailTemplate[]> => {

@@ -45,3 +45,6 @@ supabase/.temp/
 
 # local scratch
 /scratch
+
+create_admin.js
+update_admin.js

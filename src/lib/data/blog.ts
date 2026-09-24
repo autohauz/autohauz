@@ -4,7 +4,7 @@ import { requireEnv } from "@/lib/config";
 import { buildMediaUrl } from "@/lib/media";
 import type { BlogArticle, BlogArticleListItem, BlogCategory, BlogTag } from "@/lib/domain";
 
-type RawRow = Record<string, any>;
+type RawRow = Record<string, unknown>;
 
 export const getBlogCategories = unstable_cache(
   async (): Promise<BlogCategory[]> => {

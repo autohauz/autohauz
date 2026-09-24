@@ -94,7 +94,7 @@ export function TrustedReviewsSection({
                   </div>
                   
                   <p className="text-[14px] leading-[1.6] text-[#4b5563] mb-6 flex-grow">
-                    "{review.quote}"
+                    &quot;{review.quote}&quot;
                   </p>
                   
                   <div className="flex items-center gap-3 mt-auto">

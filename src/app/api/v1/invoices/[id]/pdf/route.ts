@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
         invoice: detail.invoice,
         items: detail.items,
         profile,
-      }) as React.ReactElement<any>
+      }) as React.ReactElement<unknown>
     );
 
     // Provide the stream to the response

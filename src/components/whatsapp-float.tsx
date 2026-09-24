@@ -21,9 +21,9 @@ export function WhatsAppFloat({ phone }: { phone?: string | null }) {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const isDismissed = sessionStorage.getItem(STORAGE_KEY) === "true";
     setDismissed(isDismissed);
+    setIsClient(true);
   }, []);
 
   const handleDismiss = () => {

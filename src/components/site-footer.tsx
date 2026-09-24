@@ -217,7 +217,7 @@ export async function SiteFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 flex flex-col items-center justify-center gap-4 border-t border-white/10 pt-8 text-[13px] text-white/70 sm:flex-row sm:gap-6">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-[13px] text-white/70 lg:flex-row lg:gap-6">
           <p>
             © {year} {business.legalName || name}. All rights reserved.
           </p>
@@ -229,6 +229,9 @@ export async function SiteFooter() {
               </li>
             ))}
           </ul>
+          <p className="flex items-center gap-1">
+            Website by <a href="https://www.tradiedigitalagency.com/" target="_blank" rel="noopener noreferrer" className="text-[#f15a24] font-medium border-b border-[#f15a24]/50 hover:border-[#f15a24] transition-colors pb-0.5">Tradie Digital Agency</a>
+          </p>
         </div>
       </Container>
     </footer>

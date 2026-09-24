@@ -42,8 +42,8 @@ export function BlogForm({
         const res = await createBlogArticle(formData);
         if (res.error) throw new Error(res.error);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsPending(false);
     }
@@ -121,7 +121,7 @@ export function BlogForm({
                 name="scheduledAt" 
                 defaultValue={article?.scheduledAt ? new Date(article.scheduledAt).toISOString().slice(0, 16) : ""} 
               />
-              <p className="text-xs text-muted-foreground mt-1">Only applies if status is "Scheduled".</p>
+              <p className="text-xs text-muted-foreground mt-1">Only applies if status is &quot;Scheduled&quot;.</p>
             </div>
           </div>
 

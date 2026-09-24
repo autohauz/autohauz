@@ -35,8 +35,8 @@ export function CategoryManager({ initialCategories }: { initialCategories: Blog
         // Optimistic refresh would be better, but for now we just reload
         window.location.reload();
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsPending(false);
     }

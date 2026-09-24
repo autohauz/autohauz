@@ -31,8 +31,8 @@ export function EmailTemplateForm({ template }: { template?: EmailTemplate }) {
         const res = await createEmailTemplate(formData);
         if (res.error) throw new Error(res.error);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsPending(false);
     }

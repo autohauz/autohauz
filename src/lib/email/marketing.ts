@@ -70,9 +70,9 @@ export const MarketingEmailService = {
         },
       });
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Failed to send to \${contact.email}`, error);
-      return { error: error.message };
+      return { error: (error as Error).message };
     }
   },
 

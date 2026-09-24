@@ -104,7 +104,7 @@ export function BlogImageUpload({
         .getPublicUrl(data.path);
 
       setUrl(publicUrlData.publicUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || "Failed to upload image");
     } finally {
       setUploading(false);
