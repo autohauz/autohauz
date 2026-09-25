@@ -1,17 +1,10 @@
 import type { NextConfig } from "next";
+import { buildCsp } from "./src/lib/security/csp";
 
 const isDev = process.env.NODE_ENV === "development";
 
-// Google Analytics is opt-in (NEXT_PUBLIC_GA_MEASUREMENT_ID). Its hosts are only
-// admitted to the CSP when it is configured, so an unconfigured site does not
-// carry a standing exception for a third party it never contacts.
-const gaEnabled = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
-const gaScriptHosts = gaEnabled ? " https://www.googletagmanager.com" : "";
-const gaConnectHosts = gaEnabled ? " https://www.google-analytics.com https://analytics.google.com" : "";
-
-// Supabase project host — the only remote image origin the app needs (vehicle
-// photos in the public `media` bucket). Derived from the URL so nothing else
-// can be hot-linked through next/image.
+// Supabase project host: the only remote image origin (vehicle photos in the
+// public `media` bucket) and the only API origin the browser talks to.
 const supabaseHost = (() => {
   try {
     return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : undefined;
@@ -20,9 +13,14 @@ const supabaseHost = (() => {
   }
 })();
 
-const scriptSrc = isDev
-  ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com${gaScriptHosts};`
-  : `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${gaScriptHosts};`;
+// Public-page CSP (static/ISR pages cannot carry a per-request nonce). Staff
+// pages (/admin, /auth) get a strict nonce policy from src/proxy.ts instead.
+// Google Analytics hosts are admitted only when GA is configured.
+const publicCsp = buildCsp({
+  isDev,
+  supabaseOrigin: supabaseHost ? `https://${supabaseHost}` : undefined,
+  analytics: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID),
+});
 
 const nextConfig: NextConfig = {
   // Remove "X-Powered-By: Next.js" from every response — reduces attack surface
@@ -30,7 +28,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     serverActions: {
-      bodySizeLimit: "8mb", // WARNING: Vercel hard-limits request bodies to 4.5MB on all plans
+      // No Server Action receives files (photos upload straight to Supabase
+      // Storage), so the default-sized payloads are all that is needed.
+      bodySizeLimit: "1mb",
     },
   },
   turbopack: {
@@ -55,15 +55,15 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // ── Public CSP (everything except the staff area, which the proxy covers) ─
+      {
+        source: "/((?!admin|auth/).*)",
+        headers: [{ key: "Content-Security-Policy", value: publicCsp }],
+      },
       // ── Global security headers (all routes) ────────────────────────────────
       {
         source: "/(.*)",
         headers: [
-          {
-            key: "Content-Security-Policy",
-            value:
-              `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co${gaConnectHosts}; frame-src https://challenges.cloudflare.com https://maps.google.com https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;`,
-          },
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",

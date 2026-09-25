@@ -13,7 +13,6 @@ export const metadata: Metadata = pageMetadata({
   path: "/trade-in",
   title: withRegion("Trade In Your Car — Free Valuation"),
   description: `${withRegion("Trade in your current car against your next one")}. Tell us about it and we'll value it — no obligation.`,
-  keywords: ["car trade in", "trade in valuation", "trade in used car"],
 });
 
 export const revalidate = 3600;

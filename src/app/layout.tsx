@@ -4,7 +4,6 @@ import { Analytics } from "@vercel/analytics/next";
 import { Archivo } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-import { Toaster } from "sonner";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { siteBaseUrl } from "@/lib/seo/site";
 import { site } from "@/config/site";
@@ -46,9 +45,9 @@ export const metadata: Metadata = {
   // declares its own self-referencing canonical via `pageMetadata()`.
   applicationName: site.brandName,
   icons: {
+    // /favicon.ico is emitted by the app/favicon.ico file convention; listing
+    // it (and its identical /brand copy) here duplicated the tag.
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: site.assets.favicon, sizes: "any" },
       { url: "/brand/favicon-16.png", type: "image/png", sizes: "16x16" },
       { url: "/brand/favicon-32.png", type: "image/png", sizes: "32x32" },
       { url: site.assets.icon192, type: "image/png", sizes: "192x192" },
@@ -136,7 +135,6 @@ export default async function RootLayout({
         )}
         {children}
         <WhatsAppFloat phone={phones.whatsapp || null} />
-        <Toaster richColors position="top-right" />
 
         {/* Vercel-hosted scripts; they 404 (and log console errors) anywhere else. */}
         {process.env.VERCEL ? (

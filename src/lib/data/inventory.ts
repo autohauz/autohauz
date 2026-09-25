@@ -204,13 +204,18 @@ export async function getVehicleListing(
   const withCity = <T,>(q: T): T => (locationIds ? (q as any).in("location_id", locationIds) : q);
 
   const base = supabase.from("vehicles").select(CARD_SELECT, { count: "exact" });
-  const { data, count } = await applySort(withCity(applyFilters(base, filters)), sort).range(from, to);
-
-  // Facets over the same filter set (bounded columns; fine at V1 scale).
+  // Facets over the same filter set: four narrow columns per matching car.
+  // PostgREST caps a response at max_rows (1,000, supabase/config.toml), so
+  // above ~1,000 live cars the counts would undercount — move facets to a
+  // GROUP BY RPC before stock reaches that size.
   const facetBase = supabase
     .from("vehicles")
     .select("body_type, fuel_type, transmission, makes:make_id!inner ( name, slug )");
-  const { data: facetRows } = await withCity(applyFilters(facetBase, filters));
+  // Independent queries: run them together rather than back to back.
+  const [{ data, count }, { data: facetRows }] = await Promise.all([
+    applySort(withCity(applyFilters(base, filters)), sort).range(from, to),
+    withCity(applyFilters(facetBase, filters)),
+  ]);
   const rows = (facetRows ?? []) as RawRow[];
 
   const makeTally = new Map<string, { label: string; count: number }>();
@@ -428,6 +433,8 @@ export async function getVehicleLeadContext(
     .from("vehicles")
     .select("id, year, variant, price, makes:make_id ( name ), models:model_id ( name )")
     .eq("id", id)
+    // Public prefill for finance/trade-in forms: never expose draft/archived stock.
+    .in("status", ["available", "reserved"])
     .maybeSingle();
   if (!data) return null;
   const r = data as RawRow;
@@ -438,10 +445,9 @@ export async function getVehicleLeadContext(
   };
 }
 
-export async function getSimilarVehicles(
-  vehicle: Pick<VehicleDetail, "id" | "bodyType" | "price">,
-  limit = 6,
-): Promise<VehicleListItem[]> {
+/** Cached with the rest of the inventory (busted by the `vehicles` tag). */
+export const getSimilarVehicles = unstable_cache(
+  async (vehicle: Pick<VehicleDetail, "id" | "bodyType" | "price">, limit = 6): Promise<VehicleListItem[]> => {
   const supabase = createAdminClient();
   const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL").trim();
   const { data } = await supabase
@@ -454,7 +460,10 @@ export async function getSimilarVehicles(
     .lte("price", vehicle.price * 1.2)
     .limit(limit);
   return (data ?? []).map((r: RawRow) => toListItem(r, supabaseUrl));
-}
+  },
+  ["similar-vehicles"],
+  { revalidate: 900, tags: ["vehicles"] },
+);
 
 export const getMakes = unstable_cache(
   async (): Promise<Make[]> => {
@@ -477,11 +486,16 @@ export const getMakes = unstable_cache(
 );
 
 /** All models (for the admin cascading make→model select). */
-export async function getAllModels(): Promise<Model[]> {
-  const supabase = createAdminClient();
-  const { data } = await supabase.from("models").select("id, make_id, name, slug").order("name");
-  return ((data ?? []) as RawRow[]).map((m) => ({ id: m.id, makeId: m.make_id, name: m.name, slug: m.slug }));
-}
+/** All models (reference data). Cached: it is read on every listing render and by a public Server Action. */
+export const getAllModels = unstable_cache(
+  async (): Promise<Model[]> => {
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("models").select("id, make_id, name, slug").order("name");
+    return ((data ?? []) as RawRow[]).map((m) => ({ id: m.id, makeId: m.make_id, name: m.name, slug: m.slug }));
+  },
+  ["all-models"],
+  { revalidate: 3600, tags: ["makes", "public"] },
+);
 
 /** All features grouped for the admin form. */
 export async function getAllFeatures(): Promise<Feature[]> {

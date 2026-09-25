@@ -1,10 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ListingPage } from "@/components/listing/listing-page";
 import { getVehicleCount } from "@/lib/data/inventory";
-import { parseBodySegment, BODY_TYPE_LABELS } from "@/lib/nav";
+import { parseBodySegment, BODY_TYPE_LABELS, bodyTypeHref } from "@/lib/nav";
 import { listingMetadata } from "@/lib/seo/listing";
-import { bodyTypeTitle, bodyTypeDescription, pluralBodyLabel } from "@/lib/seo/templates";
+import { bodyTypeTitle, bodyTypeDescription } from "@/lib/seo/templates";
 
 export const revalidate = 300;
 
@@ -22,7 +22,6 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
     sp,
     title: bodyTypeTitle(label),
     description: bodyTypeDescription(label),
-    keywords: [`used ${pluralBodyLabel(label).toLowerCase()} for sale`, `second hand ${label.toLowerCase()}`],
     thin: { total: await getVehicleCount({ bodyType: b }), kind: "category" },
   });
 }
@@ -31,6 +30,8 @@ export default async function BodyTypePage({ params, searchParams }: { params: P
   const [{ bodyType }, sp] = await Promise.all([params, searchParams]);
   const b = parseBodySegment(bodyType);
   if (!b) notFound();
+  // `people_mover` and `people-mover` both parse; only the hyphenated form is canonical.
+  if (bodyType !== bodyTypeHref(b).split("/").pop()) permanentRedirect(bodyTypeHref(b));
   const label = BODY_TYPE_LABELS[b];
   const path = `/used-cars/body/${bodyType}`;
 

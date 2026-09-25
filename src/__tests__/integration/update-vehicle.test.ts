@@ -7,6 +7,7 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 // Mock auth
 vi.mock("@/lib/security/auth", () => ({
   requireAdmin: vi.fn().mockResolvedValue({ id: "admin-123" }),
+  requirePermission: vi.fn().mockResolvedValue({ id: "admin-123", staffRole: "admin" }),
 }));
 
 // Mock supabase admin client

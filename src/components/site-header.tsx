@@ -7,6 +7,7 @@ import { BuyCarsMenu } from "@/components/buy-cars-menu";
 import { MobileNav } from "@/components/mobile-nav";
 import { Container } from "@/components/ui/container";
 import { site } from "@/config/site";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 const PRIMARY = [
   { href: "/sell-your-car", label: "Sell your car" },
@@ -53,11 +54,11 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2 sm:gap-3">
           {phone ? (
             <a
-              href={`tel:${phone.replace(/\s+/g, "")}`}
+              href={telHref(phone)}
               className="hidden h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted md:inline-flex"
             >
               <Phone className="size-4 text-accent-bright" aria-hidden="true" />
-              {phone}
+              {formatPhoneForDisplay(phone)}
             </a>
           ) : null}
           <Link

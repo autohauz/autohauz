@@ -1,161 +1,142 @@
-/* eslint-disable @typescript-eslint/no-explicit-any --
-   Untyped Supabase client: joined rows surface as `any` at this DB boundary. */
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireEnv } from "@/lib/config";
 import { buildMediaUrl } from "@/lib/media";
 import { siteBaseUrl } from "@/lib/seo/site";
-import { NAV_BODY_TYPES, BUDGET_BANDS, bodyTypeHref, budgetHref } from "@/lib/nav";
+import { isIndexableLanding } from "@/lib/seo/guards";
+import { NAV_BODY_TYPES, BUDGET_BANDS, bodyTypeHref, budgetHref, vehicleHref } from "@/lib/nav";
 
 export const revalidate = 3600;
 
 /**
- * XML sitemap.
+ * XML sitemap — only canonical, indexable URLs.
  *
- * Two correctness rules govern what goes in here:
- *
- *  1. **Only indexable URLs.** A sitemap is a set of canonical, indexable
- *     recommendations. Sold vehicles are now `noindex` (expired inventory), so
- *     listing them told Google to crawl pages we simultaneously ask it not to
- *     index — a contradiction that Search Console reports as "Submitted URL
- *     marked noindex" and that wastes crawl budget on dead stock.
- *  2. **Real `lastModified` values.** Landing pages previously all carried a
- *     hardcoded 2026-01-01 date. A date that never changes trains Google to
- *     stop re-crawling them; landing pages now inherit the freshest
- *     `updated_at` of the inventory they list, so they re-crawl when stock
- *     actually turns over.
- *
- * Vehicle entries also carry `images`, which feeds Google Images — a real
- * discovery channel for car shopping, and free to emit since we already have
- * the URLs.
+ *  • Vehicles: available and reserved only (sold cars are `noindex`).
+ *  • Make / model / body-type / budget landing pages: only when they carry
+ *    enough stock to pass the same thin-page guard the pages themselves apply
+ *    (src/lib/seo/guards.ts). A thin landing page is `noindex`, and listing a
+ *    noindex URL here contradicts it ("Submitted URL marked noindex").
+ *  • Blog: published articles, and categories that contain one.
+ *  • lastModified is real: inventory pages take the newest stock change;
+ *    evergreen pages carry no date rather than an invented one.
  */
+type VehicleRow = {
+  slug: string;
+  updated_at: string | null;
+  status: string;
+  price: number | string;
+  body_type: string;
+  makes: { slug: string } | null;
+  models: { slug: string } | null;
+  vehicle_images: { is_cover: boolean; sort_order: number | null; media_assets: { storage_key: string } | null }[] | null;
+};
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteBaseUrl();
   const supabase = createAdminClient();
   const supabaseUrl = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const staticDate = new Date("2026-01-01T00:00:00Z");
 
-  const [makesRes, modelsRes, vehiclesRes, blogArticlesRes, blogCategoriesRes] = await Promise.all([
-    supabase.from("makes").select("slug"),
-    supabase.from("models").select("slug, makes:make_id ( slug )"),
+  const [vehiclesRes, articlesRes, categoriesRes, testimonialsRes] = await Promise.all([
     supabase
       .from("vehicles")
       .select(
-        "slug, updated_at, status, makes:make_id ( slug ), models:model_id ( slug ), vehicle_images ( is_cover, sort_order, media_assets:media_id ( storage_key ) )",
+        "slug, updated_at, status, price, body_type, makes:make_id ( slug ), models:model_id ( slug ), vehicle_images ( is_cover, sort_order, media_assets:media_id ( storage_key ) )",
       )
-      // `sold` is deliberately excluded — see rule 1 above.
       .in("status", ["available", "reserved"])
       .limit(45000),
     supabase
       .from("blog_articles")
-      .select("slug, updated_at, status")
-      .eq("status", "published")
-      .limit(1000),
-    supabase
-      .from("blog_categories")
-      .select("slug, created_at"),
+      .select("slug, updated_at, published_at, category_id, status, scheduled_at")
+      .or(`status.eq.published,and(status.eq.scheduled,scheduled_at.lte.${new Date().toISOString()})`)
+      .limit(5000),
+    supabase.from("blog_categories").select("id, slug"),
+    supabase.from("testimonials").select("id", { count: "exact", head: true }).eq("is_approved", true),
   ]);
 
-  const vehicles = ((vehiclesRes.data ?? []) as any[]).filter(
-    (v) => v.makes?.slug && v.models?.slug,
-  );
-  
-  const blogArticles = (blogArticlesRes.data ?? []) as any[];
-  const blogCategories = (blogCategoriesRes.data ?? []) as any[];
+  for (const [name, res] of Object.entries({ vehicles: vehiclesRes, articles: articlesRes, categories: categoriesRes })) {
+    if (res.error) console.error(`[sitemap] ${name} query failed:`, res.error.message);
+  }
 
-  // Freshest inventory timestamp — the honest `lastModified` for every hub and
-  // landing page, all of which re-render when stock changes.
-  const latestInventoryDate =
-    vehicles.reduce<Date>((latest, v) => {
-      const d = v.updated_at ? new Date(v.updated_at) : null;
-      return d && d > latest ? d : latest;
-    }, staticDate) ?? staticDate;
+  const vehicles = ((vehiclesRes.data ?? []) as unknown as VehicleRow[]).filter((v) => v.makes?.slug && v.models?.slug);
+  const latest = vehicles.reduce<Date | undefined>((acc, v) => {
+    const d = v.updated_at ? new Date(v.updated_at) : undefined;
+    return d && (!acc || d > acc) ? d : acc;
+  }, undefined);
 
-  const url = (
+  const entry = (
     path: string,
-    lastModified: Date | string = staticDate,
-    priority = 0.6,
-    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] = "weekly",
-  ): MetadataRoute.Sitemap[number] => ({
-    url: `${base}${path}`,
-    lastModified,
-    changeFrequency,
-    priority,
-  });
+    opts: { lastModified?: Date; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] },
+  ): MetadataRoute.Sitemap[number] => ({ url: `${base}${encodeURI(path)}`, ...opts });
 
-  // Evergreen informational pages: real content, but they rarely change.
-  const staticRoutes = [
-    "/sell-your-car", "/trade-in", "/finance", "/about",
-    "/testimonials", "/faqs", "/contact", "/how-it-works",
-    "/legal/privacy-policy", "/legal/terms", "/legal/disclaimer",
-  ].map((p) => url(p, staticDate, 0.7, "monthly"));
+  // Landing-page stock counts, using the same basis as the pages' own guard
+  // (available cars).
+  const available = vehicles.filter((v) => v.status === "available");
+  const tally = (key: (v: VehicleRow) => string) =>
+    available.reduce<Map<string, number>>((m, v) => m.set(key(v), (m.get(key(v)) ?? 0) + 1), new Map());
+  const byMake = tally((v) => v.makes!.slug);
+  const byModel = tally((v) => `${v.makes!.slug}/${v.models!.slug}`);
+  const byBody = tally((v) => v.body_type);
 
-  // Inventory hubs turn over daily and deserve the highest crawl priority
-  // after the vehicles themselves.
-  const hubRoutes = [
-    url("/", latestInventoryDate, 1, "daily"),
-    url("/used-cars", latestInventoryDate, 0.9, "daily"),
+  const landing: MetadataRoute.Sitemap = [
+    ...[...byMake].filter(([, n]) => isIndexableLanding(n, "makeModel")).map(([slug]) => entry(`/used-cars/${slug}`, { lastModified: latest, priority: 0.7, changeFrequency: "daily" })),
+    ...[...byModel].filter(([, n]) => isIndexableLanding(n, "makeModel")).map(([path]) => entry(`/used-cars/${path}`, { lastModified: latest, priority: 0.6, changeFrequency: "daily" })),
+    ...NAV_BODY_TYPES.filter((b) => isIndexableLanding(byBody.get(b) ?? 0, "category")).map((b) =>
+      entry(bodyTypeHref(b), { lastModified: latest, priority: 0.7, changeFrequency: "daily" }),
+    ),
+    ...BUDGET_BANDS.filter((band) => isIndexableLanding(available.filter((v) => Number(v.price) <= band.max).length, "category")).map((band) =>
+      entry(budgetHref(band.max), { lastModified: latest, priority: 0.6, changeFrequency: "daily" }),
+    ),
   ];
-  
-  const blogHubRoute = [url("/blog", staticDate, 0.8, "daily")];
 
-  // Programmatic landing pages.
-  const makeRoutes = ((makesRes.data ?? []) as any[]).map((m) =>
-    url(`/used-cars/${m.slug}`, latestInventoryDate, 0.7, "daily"),
-  );
-  const modelRoutes = ((modelsRes.data ?? []) as any[])
-    .filter((m) => m.makes?.slug)
-    .map((m) => url(`/used-cars/${m.makes.slug}/${m.slug}`, latestInventoryDate, 0.6, "daily"));
-  const bodyRoutes = NAV_BODY_TYPES.map((b) =>
-    url(bodyTypeHref(b), latestInventoryDate, 0.7, "daily"),
-  );
-  const budgetRoutes = BUDGET_BANDS.map((b) =>
-    url(budgetHref(b.max), latestInventoryDate, 0.6, "daily"),
-  );
+  const evergreen = [
+    "/sell-your-car", "/trade-in", "/finance", "/about", "/faqs", "/contact", "/how-it-works",
+    "/legal/privacy-policy", "/legal/terms", "/legal/disclaimer",
+    ...((testimonialsRes.count ?? 0) > 0 ? ["/testimonials"] : []),
+  ].map((p) => entry(p, { priority: 0.6, changeFrequency: "monthly" }));
 
-  // Blog pages
-  const blogCategoryRoutes = blogCategories.map((c) =>
-    url(`/blog/category/${c.slug}`, c.created_at ? new Date(c.created_at) : staticDate, 0.7, "weekly"),
-  );
-  const blogArticleRoutes = blogArticles.map((a) =>
-    url(`/blog/${a.slug}`, a.updated_at ? new Date(a.updated_at) : staticDate, 0.8, "weekly"),
-  );
+  type ArticleRow = { slug: string; updated_at: string | null; published_at: string | null; category_id: string | null };
+  const articles = (articlesRes.data ?? []) as ArticleRow[];
+  const usedCategories = new Set(articles.map((a) => a.category_id).filter(Boolean));
+  const newestArticle = articles.reduce<Date | undefined>((acc, a) => {
+    const d = a.updated_at ? new Date(a.updated_at) : undefined;
+    return d && (!acc || d > acc) ? d : acc;
+  }, undefined);
 
-  // VDPs — highest-value URLs on the site, with image entries for Google Images.
-  const vehicleRoutes = vehicles.map((v) => {
-    // Image URLs are derived from the media asset's storage key, the same way
-    // `src/lib/data/inventory.ts` builds them for the gallery.
-    const images = ((v.vehicle_images ?? []) as any[])
-      .slice()
+  const blog: MetadataRoute.Sitemap = articles.length
+    ? [
+        entry("/blog", { lastModified: newestArticle, priority: 0.6, changeFrequency: "weekly" }),
+        ...((categoriesRes.data ?? []) as { id: string; slug: string }[])
+          .filter((c) => usedCategories.has(c.id))
+          .map((c) => entry(`/blog/category/${c.slug}`, { lastModified: newestArticle, priority: 0.5, changeFrequency: "weekly" })),
+        ...articles.map((a) =>
+          entry(`/blog/${a.slug}`, { lastModified: a.updated_at ? new Date(a.updated_at) : undefined, priority: 0.6, changeFrequency: "monthly" }),
+        ),
+      ]
+    : [];
+
+  const vehicleEntries: MetadataRoute.Sitemap = vehicles.map((v) => {
+    const images = [...(v.vehicle_images ?? [])]
       .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((img) =>
-        img.media_assets?.storage_key ? buildMediaUrl(supabaseUrl, img.media_assets.storage_key) : null,
-      )
-      .filter((url): url is string => Boolean(url));
-
+      .map((img) => img.media_assets?.storage_key)
+      .filter((key): key is string => Boolean(key) && !/^https?:\/\//i.test(key!))
+      .map((key) => buildMediaUrl(supabaseUrl, key))
+      .slice(0, 50);
     return {
-      ...url(
-        `/used-cars/${v.makes.slug}/${v.models.slug}/${v.slug}`,
-        v.updated_at ? new Date(v.updated_at) : staticDate,
-        0.8,
-        "daily" as const,
-      ),
-      // Google caps image sitemap entries at 1000 per URL; a listing never has
-      // more than a few dozen, so the slice is purely defensive.
-      ...(images.length > 0 ? { images: images.slice(0, 50) } : {}),
+      ...entry(vehicleHref(v.makes!.slug, v.models!.slug, v.slug), {
+        lastModified: v.updated_at ? new Date(v.updated_at) : undefined,
+        priority: 0.8,
+        changeFrequency: "daily",
+      }),
+      ...(images.length > 0 ? { images } : {}),
     };
   });
 
   return [
-    ...hubRoutes,
-    ...staticRoutes,
-    ...makeRoutes,
-    ...modelRoutes,
-    ...bodyRoutes,
-    ...budgetRoutes,
-    ...blogHubRoute,
-    ...blogCategoryRoutes,
-    ...blogArticleRoutes,
-    ...vehicleRoutes,
+    entry("/", { lastModified: latest, priority: 1, changeFrequency: "daily" }),
+    entry("/used-cars", { lastModified: latest, priority: 0.9, changeFrequency: "daily" }),
+    ...evergreen,
+    ...landing,
+    ...blog,
+    ...vehicleEntries,
   ];
 }

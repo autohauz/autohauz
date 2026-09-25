@@ -1,9 +1,13 @@
+import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowlistedAdminEmail } from "@/lib/security/admin-allowlist";
+import { isStaffRole, roleCan, type Permission, type StaffRole } from "@/lib/security/permissions";
+
+export type { Permission, StaffRole } from "@/lib/security/permissions";
 
 type SupabaseUser = {
   id: string;
@@ -43,85 +47,64 @@ export async function requireUser() {
   return user;
 }
 
-export function userHasPlatformRole(
-  user: SupabaseUser,
-  roles = ["owner", "admin", "moderator"],
-) {
+/** `app_metadata.platform_role` — set only by the service role, never by the user. */
+export function userHasPlatformRole(user: SupabaseUser, roles: readonly string[] = ["owner", "admin"]) {
   const platformRole = user.app_metadata?.platform_role;
   return typeof platformRole === "string" && roles.includes(platformRole);
 }
 
-async function userHasAdminRoleRecord(
-  userId: string,
-  roles?: string[],
-) {
+type StaffGrant = { role: StaffRole; mfaRequired: boolean };
+
+/**
+ * The staff grant for a user, or null when they are not staff.
+ *
+ * Precedence: an active `admin_roles` row (the primary authority) →
+ * `platform_role` app-metadata (owner/admin only) → the env bootstrap
+ * allowlist, which maps to `owner` so the first administrator can reach the
+ * panel before any role rows exist. One query per request (memoised).
+ */
+export const getStaffGrant = cache(async function getStaffGrant(user: SupabaseUser): Promise<StaffGrant | null> {
   const supabase = createAdminClient();
-  let query = supabase
+  const { data, error } = await supabase
     .from("admin_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("active", true);
-
-  if (roles && roles.length > 0) {
-    query = query.in("role", roles);
-  }
-
-  const { data, error } = await query.limit(1).maybeSingle();
+    .select("role, mfa_required")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Database error during admin role lookup: ${error.message}`);
   }
 
-  return !!data;
+  if (data && isStaffRole(data.role)) {
+    return { role: data.role, mfaRequired: data.mfa_required === true };
+  }
+
+  const platformRole = user.app_metadata?.platform_role;
+  if (platformRole === "owner" || platformRole === "admin") {
+    return { role: platformRole, mfaRequired: false };
+  }
+
+  if (isAllowlistedAdminEmail(user.email)) {
+    return { role: "owner", mfaRequired: false };
+  }
+
+  return null;
+});
+
+export async function getStaffRole(user: SupabaseUser): Promise<StaffRole | null> {
+  return (await getStaffGrant(user))?.role ?? null;
 }
 
 export const userHasAdminAccess = cache(async function userHasAdminAccess(user: SupabaseUser) {
-  if (isAllowlistedAdminEmail(user.email)) return true;
-  return userHasPlatformRole(user) || userHasAdminRoleRecord(user.id);
+  return (await getStaffGrant(user)) !== null;
 });
 
-export const getUserAdminRole = cache(async function getUserAdminRole(user: SupabaseUser): Promise<string> {
-  if (isAllowlistedAdminEmail(user.email)) return "super_admin";
-
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("admin_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Database error during admin role lookup: ${error.message}`);
-  }
-
-  if (data?.role) return data.role;
-  
-  if (user.app_metadata?.platform_role === "owner") return "owner";
-  if (user.app_metadata?.platform_role === "admin") return "admin";
-
-  return "viewer";
-});
-
-/**
- * Whether this staff member's role is flagged `mfa_required` in `admin_roles`.
- * Bootstrap admins (env allowlist / platform_role only) have no row → false.
- */
-const userRequiresMfa = cache(async function userRequiresMfa(user: SupabaseUser): Promise<boolean> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("admin_roles")
-    .select("mfa_required")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    throw new Error(`Database error during MFA policy lookup: ${error.message}`);
-  }
-  return data?.mfa_required === true;
-});
+/** Role label for the admin chrome. Non-staff never reach the admin layout. */
+export async function getUserAdminRole(user: SupabaseUser): Promise<StaffRole | "none"> {
+  return (await getStaffRole(user)) ?? "none";
+}
 
 /**
  * Authenticator assurance level of the current session, as verified by
@@ -134,19 +117,28 @@ export const getSessionAssuranceLevel = cache(async function getSessionAssurance
 });
 
 /**
- * True when the user's role demands MFA and this session has not satisfied it.
- * Shared by the redirecting and the JSON-returning guards.
+ * True when this session still owes a second factor: either the role demands
+ * MFA, or the user has enrolled a factor (`nextLevel === "aal2"`) — an
+ * enrolled factor that can be skipped protects nothing.
  */
 export async function mfaOutstanding(user: SupabaseUser): Promise<boolean> {
-  if (!(await userRequiresMfa(user))) return false;
-  const { current } = await getSessionAssuranceLevel();
-  return current !== "aal2";
+  const grant = await getStaffGrant(user);
+  const { current, next } = await getSessionAssuranceLevel();
+  if (current === "aal2") return false;
+  return grant?.mfaRequired === true || next === "aal2";
 }
 
-export async function requireAdmin() {
+/**
+ * Page/Server Action guard: the signed-in user must be staff holding
+ * `permission`, with any outstanding second factor satisfied. Redirects
+ * otherwise. Call it in every admin page, Server Action and data function
+ * that reads private data — layouts are not an authorization boundary.
+ */
+export async function requirePermission(permission: Permission) {
   const user = await requireUser();
+  const role = await getStaffRole(user);
 
-  if (!(await userHasAdminAccess(user))) {
+  if (!role) {
     redirect("/auth/sign-in?error=unauthorized");
   }
 
@@ -154,42 +146,16 @@ export async function requireAdmin() {
     redirect("/auth/mfa");
   }
 
-  return user;
+  if (!roleCan(role, permission)) {
+    redirect("/admin?denied=1");
+  }
+
+  return Object.assign(user, { staffRole: role });
 }
 
-export async function requireAdminRole(allowedRoles: string[]) {
-  const user = await requireUser();
-
-  if (isAllowlistedAdminEmail(user.email)) return user;
-
-  // Single DB query: fetch role once, check against both global admin and
-  // allowed roles — avoids 2 sequential round-trips to Supabase.
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("admin_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Database error during admin role lookup: ${error.message}`);
-  }
-
-  const role = data?.role ?? "";
-  const isGlobalAdmin = ["owner", "admin"].includes(role);
-  const hasSpecificRole = allowedRoles.includes(role);
-
-  if (!isGlobalAdmin && !hasSpecificRole && !userHasPlatformRole(user, allowedRoles)) {
-    redirect("/auth/sign-in?error=unauthorized");
-  }
-
-  if (await mfaOutstanding(user)) {
-    redirect("/auth/mfa");
-  }
-
-  return user;
+/** Any active staff member (the admin shell and dashboard). */
+export function requireAdmin() {
+  return requirePermission("dashboard.view");
 }
 
 export async function requireApiUser() {
@@ -205,7 +171,8 @@ export async function requireApiUser() {
   return { user, response: null };
 }
 
-export async function requireApiAdmin() {
+/** Route-handler guard: JSON 401/403 instead of redirects. */
+export async function requireApiPermission(permission: Permission) {
   const { user, response } = await requireApiUser();
 
   if (!user) {
@@ -213,7 +180,8 @@ export async function requireApiAdmin() {
   }
 
   try {
-    if (!(await userHasAdminAccess(user))) {
+    const role = await getStaffRole(user);
+    if (!role) {
       return {
         user: null,
         response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
@@ -225,6 +193,12 @@ export async function requireApiAdmin() {
         response: NextResponse.json({ error: "Multi-factor authentication required", code: "mfa_required" }, { status: 403 }),
       };
     }
+    if (!roleCan(role, permission)) {
+      return {
+        user: null,
+        response: NextResponse.json({ error: "Insufficient permissions" }, { status: 403 }),
+      };
+    }
   } catch {
     return {
       user: null,
@@ -233,4 +207,8 @@ export async function requireApiAdmin() {
   }
 
   return { user, response: null };
+}
+
+export function requireApiAdmin() {
+  return requireApiPermission("dashboard.view");
 }

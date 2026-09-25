@@ -6,14 +6,31 @@ import { env } from "@/lib/env";
  * by rate limiting, spam checks and analytics. Raw IPs are never stored.
  */
 
-/** Best-guess client IP from proxy headers (Cloudflare first, then the standard chain). */
+/**
+ * Client IP for rate limiting and abuse controls.
+ *
+ * Only headers written by infrastructure we actually sit behind are trusted:
+ * a header the platform does not set is passed through from the client
+ * verbatim, so trusting it lets anyone rotate "their IP" per request and
+ * bypass every per-IP limit.
+ *  - Vercel overwrites `x-real-ip` / `x-forwarded-for` with the real client.
+ *  - `cf-connecting-ip` is trusted only when self-hosting behind Cloudflare
+ *    (`GEO_TRUST_PROXY_HEADERS=true`, the same opt-in the geo gate uses).
+ */
 export function clientIp(headers: Headers): string {
-  return (
-    headers.get("cf-connecting-ip")?.trim() ||
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers.get("x-real-ip")?.trim() ||
-    "0.0.0.0"
-  );
+  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const realIp = headers.get("x-real-ip")?.trim();
+
+  if (process.env.VERCEL === "1") {
+    return realIp || forwarded || "0.0.0.0";
+  }
+
+  if (process.env.GEO_TRUST_PROXY_HEADERS?.trim().toLowerCase() === "true") {
+    const cf = headers.get("cf-connecting-ip")?.trim();
+    if (cf) return cf;
+  }
+
+  return forwarded || realIp || "0.0.0.0";
 }
 
 let warnedMissingSalt = false;

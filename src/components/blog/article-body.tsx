@@ -1,19 +1,14 @@
-import DOMPurify from "isomorphic-dompurify";
+import { sanitizeArticleHtml } from "@/lib/content/sanitize";
 
+/**
+ * Article HTML is sanitised when saved (admin/blog/actions.ts); sanitising
+ * again here covers rows written before that existed or by other tools.
+ */
 export function ArticleBody({ html }: { html: string }) {
-  // Defensive sanitization on render (even though it's sanitized on save)
-  const cleanHtml = DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ['target', 'class'],
-  });
-
   return (
-    <div 
-      className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none 
-                 prose-img:rounded-xl prose-img:shadow-md 
-                 prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                 prose-headings:font-heading prose-headings:font-bold"
-      dangerouslySetInnerHTML={{ __html: cleanHtml }}
+    <div
+      className="prose prose-sm max-w-none sm:prose-base lg:prose-lg dark:prose-invert prose-headings:font-heading prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl"
+      dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(html) }}
     />
   );
 }

@@ -1,17 +1,16 @@
 import { getBlogArticles } from "@/lib/data/blog";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { Container } from "@/components/ui/container";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { Plus, Edit } from "lucide-react";
-import Link from "next/link";
 import { format } from "date-fns";
 
 export const metadata = {
-  title: "Blog Management | AutoHauz Admin",
+  title: "Blog",
 };
 
 export default async function BlogAdminPage() {
-  await requireAdminRole(["content", "owner", "admin"]);
+  await requirePermission("content.write");
   const articles = await getBlogArticles({ status: "all" });
 
   return (
@@ -53,7 +52,7 @@ export default async function BlogAdminPage() {
                       {article.title}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full \${
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                         article.status === "published" ? "bg-success/10 text-success" : 
                         article.status === "draft" ? "bg-muted text-muted-foreground" :
                         "bg-warning/10 text-warning"
@@ -71,7 +70,7 @@ export default async function BlogAdminPage() {
                       {format(new Date(article.createdAt), "MMM d, yyyy")}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ButtonLink href={`/admin/blog/\${article.id}`} variant="ghost" size="sm"  >
+                      <ButtonLink href={`/admin/blog/${article.id}`} variant="ghost" size="sm"  >
                           <Edit className="size-4" />
                         </ButtonLink>
                     </td>

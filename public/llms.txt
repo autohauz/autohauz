@@ -10,7 +10,7 @@ Every vehicle is inspected before it is listed and its condition is documented, 
 - [Cars by make](https://autohauz.com.au/used-cars): make pages live at /used-cars/{make}, model pages at /used-cars/{make}/{model}
 - [Cars by body type](https://autohauz.com.au/used-cars/body/suv): body-type pages live at /used-cars/body/{body-type} (suv, ute, hatch, sedan, wagon, van, people-mover)
 - [Cars by budget](https://autohauz.com.au/used-cars/under-20000): budget pages live at /used-cars/under-{price}
-- Vehicle detail pages live at /used-cars/{make}/{model}/{slug} and carry Vehicle + Offer JSON-LD (AUD, UsedCondition, availability)
+- Vehicle detail pages live at /used-cars/{make}/{model}/{slug} and carry Car + Offer JSON-LD (AUD, UsedCondition, availability)
 
 ## Buying, selling and finance
 

@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      // The real `server-only` throws unless bundled under the react-server
+      // condition; tests import server modules directly.
+      "server-only": path.resolve(__dirname, "src/__tests__/stubs/server-only.ts"),
     },
   },
   test: {

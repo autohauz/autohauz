@@ -11,7 +11,7 @@ import type { ReadinessResult } from "@/lib/syndication/readiness";
    loosely-typed `VehicleData` convention in vehicle-form.tsx. */
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow";
+  "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus-visible:border-accent-bright transition-shadow";
 
 const CONDITION_LABELS: Record<string, string> = {
   used: "Used",

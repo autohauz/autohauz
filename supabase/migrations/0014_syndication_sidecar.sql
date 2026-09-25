@@ -28,7 +28,7 @@ create type public.au_state as enum ('NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'AC
 -- ── Dealer ──────────────────────────────────────────────────────────────────
 -- This platform is single-company and has no tenancy concept, but
 -- architecture.md scopes every syndication table by dealer_id. Carrying a real
--- FK from day one costs one row now and avoids a painful retrofit if Cars 365
+-- FK from day one costs one row now and avoids a painful retrofit if AutoHauz
 -- becomes the Meta Inventory *Partner* described in channels.md Priority 0 —
 -- in which case it syndicates on behalf of multiple rooftops.
 create table public.syndication_dealer (
@@ -48,7 +48,7 @@ create unique index idx_syndication_dealer_default
   on public.syndication_dealer(is_default) where is_default;
 
 insert into public.syndication_dealer (code, display_name, is_default)
-values ('cars365', 'Cars 365', true)
+values ('autohauz', 'AutoHauz', true)
 on conflict (code) do nothing;
 
 -- ── Vehicle sidecar ─────────────────────────────────────────────────────────

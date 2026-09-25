@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FinancePanels } from "@/components/finance-panels";
@@ -8,12 +7,12 @@ import { getFinanceParams, getPhoneNumbers } from "@/lib/data/settings";
 import { getVehicleLeadContext } from "@/lib/data/inventory";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { ResponsiveImage } from "@/components/responsive-image";
 
 export const metadata: Metadata = pageMetadata({
   path: "/finance",
-  title: "AutoHauz Finance Options — Estimate Your Repayments",
+  title: "Car finance — estimate your repayments",
   description: "Explore competitive vehicle finance solutions tailored to your lifestyle. Use our transparent calculator to estimate your weekly commitment.",
-  keywords: ["car finance Australia", "used car loan", "car repayment calculator"],
 });
 
 export const revalidate = 300;
@@ -29,13 +28,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       <SiteHeader />
       <main id="main">
         <section className="relative h-[40vh] min-h-[320px] w-full bg-[#040f24] overflow-hidden">
-          <Image
-            src="/images/heroes/finance-hero.jpg"
-            alt="Professional automotive finance consultation"
-            fill
-            priority
-            className="object-cover opacity-80"
-          />
+          <ResponsiveImage src="/images/heroes/finance-hero.jpg" alt="" fill priority className="object-cover opacity-80" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         </section>
         

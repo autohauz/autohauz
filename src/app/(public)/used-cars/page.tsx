@@ -21,7 +21,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     sp: await searchParams,
     title: TITLE,
     description: DESCRIPTION,
-    keywords: ["used cars for sale", "second hand cars", "used car dealer", "inspected used cars"],
   });
 }
 

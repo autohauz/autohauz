@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { updateTags } from "@/lib/cache";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   businessAddressSchema,
@@ -18,9 +18,6 @@ import {
 
 type ActionState = { ok?: boolean; error?: string };
 
-/** Settings are business-critical (invoice identity, contact details) — owner/admin/manager only, matching the RLS policy. */
-const SETTINGS_ROLES = ["owner", "admin", "manager"];
-
 async function upsertSetting(key: string, value: Record<string, unknown>): Promise<ActionState> {
   const supabase = createAdminClient();
   const { error } = await supabase.from("settings").upsert(
@@ -34,7 +31,7 @@ async function upsertSetting(key: string, value: Record<string, unknown>): Promi
 }
 
 export async function saveCompanyProfile(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = companyProfileSchema.safeParse({
     legalName: formData.get("legalName") ?? "",
     tradingName: formData.get("tradingName") ?? "",
@@ -56,7 +53,7 @@ export async function saveCompanyProfile(_prev: unknown, formData: FormData): Pr
 }
 
 export async function savePhoneNumbers(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = phoneNumbersSchema.safeParse({
     primary: formData.get("primary") ?? "",
     whatsapp: formData.get("whatsapp") ?? "",
@@ -66,7 +63,7 @@ export async function savePhoneNumbers(_prev: unknown, formData: FormData): Prom
 }
 
 export async function saveFinanceParams(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = financeParamsSchema.safeParse({
     annualRate: formData.get("annualRate"),
     termMonths: formData.get("termMonths"),
@@ -84,7 +81,7 @@ export async function saveFinanceParams(_prev: unknown, formData: FormData): Pro
 }
 
 export async function saveNotificationRecipients(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const emails = String(formData.get("emails") ?? "")
     .split(/[\n,]/)
     .map((e) => e.trim())
@@ -95,7 +92,7 @@ export async function saveNotificationRecipients(_prev: unknown, formData: FormD
 }
 
 export async function saveLocationHours(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = locationHoursSchema.safeParse(
     Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, formData.get(d) ?? ""])),
   );
@@ -120,7 +117,7 @@ export async function saveLocationHours(_prev: unknown, formData: FormData): Pro
 }
 
 export async function saveBusinessAddress(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = businessAddressSchema.safeParse({
     street: formData.get("street") ?? "",
     suburb: formData.get("suburb") ?? "",
@@ -133,7 +130,7 @@ export async function saveBusinessAddress(_prev: unknown, formData: FormData): P
 }
 
 export async function saveSocialLinks(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = socialLinksSchema.safeParse(
     Object.fromEntries(["facebook", "instagram", "linkedin", "x", "youtube", "tiktok"].map((k) => [k, formData.get(k) ?? ""])),
   );
@@ -142,7 +139,7 @@ export async function saveSocialLinks(_prev: unknown, formData: FormData): Promi
 }
 
 export async function saveInvoiceSettings(_prev: unknown, formData: FormData): Promise<ActionState> {
-  await requireAdminRole(SETTINGS_ROLES);
+  await requirePermission("settings.manage");
   const parsed = invoiceSettingsSchema.safeParse({
     gstEnabled: formData.get("gstEnabled") ?? false,
     gstRate: formData.get("gstRate") ?? "",

@@ -25,11 +25,14 @@ export function getRedisClient(): Redis | null {
 
   if (!redisClient) {
     redisClient = new Redis(redisUrl, {
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      maxRetriesPerRequest: 3,
+      // Rate limiting sits on the lead-capture path: a slow or unreachable
+      // Redis must fail fast (and fall back to the in-memory limiter), never
+      // hold a customer's enquiry open.
+      connectTimeout: 2000,
+      commandTimeout: 800,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: 1,
+      retryStrategy: (times) => Math.min(times * 200, 2000),
     });
 
     redisClient.on("error", (err) => {
@@ -82,7 +85,13 @@ export async function rateLimitSlidingWindow(
   // Set expiry on the key
   pipeline.pexpire(`ratelimit:${key}`, windowMs);
 
-  const results = await pipeline.exec();
+  let results: Awaited<ReturnType<typeof pipeline.exec>>;
+  try {
+    results = await pipeline.exec();
+  } catch (err) {
+    console.error("[rate-limit] Redis unavailable, using in-memory limiter:", err instanceof Error ? err.message : err);
+    return fallbackSlidingWindow(key, limit, windowMs);
+  }
   const currentCount = (results?.[1]?.[1] as number) ?? 0;
 
   const allowed = currentCount < limit;
@@ -118,11 +127,16 @@ export async function rateLimitFixedWindow(
   const redisKey = `ratelimit:fixed:${key}:${windowKey}`;
   const resetAt = new Date((windowKey + 1) * windowMs);
 
-  const current = await redis.incr(redisKey);
-
-  if (current === 1) {
-    // First request in this window, set expiry
-    await redis.pexpire(redisKey, windowMs);
+  let current: number;
+  try {
+    current = await redis.incr(redisKey);
+    if (current === 1) {
+      // First request in this window, set expiry
+      await redis.pexpire(redisKey, windowMs);
+    }
+  } catch (err) {
+    console.error("[rate-limit] Redis unavailable, using in-memory limiter:", err instanceof Error ? err.message : err);
+    return fallbackFixedWindow(key, limit, windowMs);
   }
 
   const allowed = current <= limit;

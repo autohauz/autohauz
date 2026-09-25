@@ -23,15 +23,22 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { common, createLowlight } from "lowlight";
 import {
-  Bold, Italic, Strikethrough, Code, List, ListOrdered, Quote,
-  Minus, Undo, Redo, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Heading3
+  Bold, Italic, Strikethrough, List, ListOrdered, Quote,
+  Minus, Undo, Redo, Link as LinkIcon, Image as ImageIcon, Heading2, Heading3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const lowlight = createLowlight(common);
+
+const BLOG_IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+const BLOG_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 export function BlogEditor({
   content,
@@ -47,10 +54,16 @@ export function BlogEditor({
 
   const editor = useEditor({
     extensions: [
+      // StarterKit v3 bundles link/underline/strike; they are registered
+      // below with their own config, so disable the bundled copies (TipTap
+      // warns on duplicate extension names).
       StarterKit.configure({
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
+        link: false,
+        underline: false,
+        strike: false,
       }),
       Placeholder.configure({ placeholder }),
       Image.configure({
@@ -84,28 +97,38 @@ export function BlogEditor({
     content,
     editorProps: {
       attributes: {
+        // The wrapper shows the focus ring (focus-within), so the surface itself needn't.
         class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[400px] py-4",
+        role: "textbox",
+        "aria-multiline": "true",
+        "aria-label": "Article body",
       },
     },
-    onUpdate: ({ editor }) => {
-      // DOMPurify to strip any malicious payload right at the boundary
-      const html = DOMPurify.sanitize(editor.getHTML(), {
-        USE_PROFILES: { html: true },
-        ADD_ATTR: ['target', 'class'],
-      });
-      onChange(html);
-    },
+    // Sanitised on the server when saved (admin/blog/actions.ts); the
+    // browser is not a trust boundary, so no per-keystroke cleaning here.
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
 
   const uploadImage = async (file: File): Promise<string | null> => {
+    // The original filename never reaches storage: the key is random and the
+    // extension comes from an allowlist of raster types (the `media` bucket
+    // enforces the same MIME list server-side; SVG is excluded on purpose).
+    const ext = BLOG_IMAGE_TYPES[file.type];
+    if (!ext) {
+      window.alert("Please choose a JPEG, PNG, WebP or AVIF image.");
+      return null;
+    }
+    if (file.size > BLOG_IMAGE_MAX_BYTES) {
+      window.alert("Images must be 10 MB or smaller.");
+      return null;
+    }
     setIsUploading(true);
     try {
-      const rand = Math.random().toString(36).substring(2, 15);
-      const filePath = `blog/\${rand}_\${Date.now()}-\${file.name}`;
+      const filePath = `blog/${crypto.randomUUID()}.${ext}`;
 
       const { data, error } = await supabase.storage
         .from("media")
-        .upload(filePath, file, { upsert: false });
+        .upload(filePath, file, { contentType: file.type, upsert: false });
 
       if (error) {
         console.error("Upload error", error);
@@ -122,7 +145,7 @@ export function BlogEditor({
   const addImage = async () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = "image/jpeg,image/png,image/webp,image/avif";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -149,131 +172,64 @@ export function BlogEditor({
 
   if (!editor) return null;
 
+  // `active` is set only for toggles, so they expose aria-pressed; one-shot
+  // commands (image, divider, undo) stay plain buttons.
+  type ToolbarItem = { label: string; icon: typeof Bold; run: () => void; active?: boolean; disabled?: boolean };
+  const toolbarGroups: ToolbarItem[][] = [
+    [
+      { label: "Bold", icon: Bold, run: () => editor.chain().focus().toggleBold().run(), active: editor.isActive("bold") },
+      { label: "Italic", icon: Italic, run: () => editor.chain().focus().toggleItalic().run(), active: editor.isActive("italic") },
+      { label: "Strikethrough", icon: Strikethrough, run: () => editor.chain().focus().toggleStrike().run(), active: editor.isActive("strike") },
+    ],
+    [
+      { label: "Heading 2", icon: Heading2, run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: editor.isActive("heading", { level: 2 }) },
+      { label: "Heading 3", icon: Heading3, run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: editor.isActive("heading", { level: 3 }) },
+    ],
+    [
+      { label: "Bulleted list", icon: List, run: () => editor.chain().focus().toggleBulletList().run(), active: editor.isActive("bulletList") },
+      { label: "Numbered list", icon: ListOrdered, run: () => editor.chain().focus().toggleOrderedList().run(), active: editor.isActive("orderedList") },
+      { label: "Quote", icon: Quote, run: () => editor.chain().focus().toggleBlockquote().run(), active: editor.isActive("blockquote") },
+    ],
+    [
+      { label: "Link", icon: LinkIcon, run: addLink, active: editor.isActive("link") },
+      { label: "Insert image", icon: ImageIcon, run: addImage, disabled: isUploading },
+    ],
+    [{ label: "Divider", icon: Minus, run: () => editor.chain().focus().setHorizontalRule().run() }],
+    [
+      { label: "Undo", icon: Undo, run: () => editor.chain().focus().undo().run(), disabled: !editor.can().chain().focus().undo().run() },
+      { label: "Redo", icon: Redo, run: () => editor.chain().focus().redo().run(), disabled: !editor.can().chain().focus().redo().run() },
+    ],
+  ];
+
   return (
-    <div className="border border-border rounded-xl bg-card overflow-hidden flex flex-col">
-      <div className="flex flex-wrap items-center gap-1 border-b border-border p-2 bg-muted/40 text-foreground">
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("bold") && "bg-muted text-primary")}
-          title="Bold"
-        >
-          <Bold className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("italic") && "bg-muted text-primary")}
-          title="Italic"
-        >
-          <Italic className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("strike") && "bg-muted text-primary")}
-          title="Strike"
-        >
-          <Strikethrough className="size-4" />
-        </button>
-        
-        <div className="w-px h-6 bg-border mx-1" />
-        
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("heading", { level: 2 }) && "bg-muted text-primary")}
-          title="Heading 2"
-        >
-          <Heading2 className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("heading", { level: 3 }) && "bg-muted text-primary")}
-          title="Heading 3"
-        >
-          <Heading3 className="size-4" />
-        </button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("bulletList") && "bg-muted text-primary")}
-          title="Bullet List"
-        >
-          <List className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("orderedList") && "bg-muted text-primary")}
-          title="Numbered List"
-        >
-          <ListOrdered className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("blockquote") && "bg-muted text-primary")}
-          title="Quote"
-        >
-          <Quote className="size-4" />
-        </button>
-        
-        <div className="w-px h-6 bg-border mx-1" />
-        
-        <button
-          type="button"
-          onClick={addLink}
-          className={cn("p-2 rounded hover:bg-muted transition-colors", editor.isActive("link") && "bg-muted text-primary")}
-          title="Link"
-        >
-          <LinkIcon className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={addImage}
-          disabled={isUploading}
-          className="p-2 rounded hover:bg-muted transition-colors disabled:opacity-50"
-          title="Insert Image"
-        >
-          <ImageIcon className="size-4" />
-        </button>
-        
-        <div className="w-px h-6 bg-border mx-1" />
-        
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          className="p-2 rounded hover:bg-muted transition-colors"
-          title="Divider"
-        >
-          <Minus className="size-4" />
-        </button>
-
-        <div className="w-px h-6 bg-border mx-1" />
-
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().chain().focus().undo().run()}
-          className="p-2 rounded hover:bg-muted transition-colors disabled:opacity-50"
-          title="Undo"
-        >
-          <Undo className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().chain().focus().redo().run()}
-          className="p-2 rounded hover:bg-muted transition-colors disabled:opacity-50"
-          title="Redo"
-        >
-          <Redo className="size-4" />
-        </button>
+    <div className="border border-input rounded-xl bg-card overflow-hidden flex flex-col focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+      <div
+        role="toolbar"
+        aria-label="Formatting"
+        className="flex flex-wrap items-center gap-1 border-b border-border p-2 bg-muted/40 text-foreground"
+      >
+        {toolbarGroups.map((group, gi) => (
+          <div key={gi} className="flex items-center gap-1">
+            {gi > 0 ? <div className="w-px h-6 bg-border mx-1" aria-hidden="true" /> : null}
+            {group.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.run}
+                disabled={item.disabled}
+                aria-label={item.label}
+                aria-pressed={item.active === undefined ? undefined : item.active}
+                title={item.label}
+                className={cn(
+                  "p-2 rounded hover:bg-muted transition-colors disabled:opacity-50",
+                  item.active && "bg-muted text-primary",
+                )}
+              >
+                <item.icon className="size-4" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
 
       <div className="flex-1 px-4 sm:px-6 relative text-foreground">

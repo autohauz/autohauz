@@ -1,7 +1,10 @@
 "use server";
 
-import { requireAdminRole } from "@/lib/security/auth";
+import type { User } from "@supabase/supabase-js";
+import { requirePermission } from "@/lib/security/auth";
+import { canManageRole, isStaffRole, STAFF_ROLES, type StaffRole } from "@/lib/security/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deriveProfileFromUser } from "@/lib/auth/profile";
 import { revalidatePath } from "next/cache";
 
 export type AdminRoleEntry = {
@@ -26,16 +29,36 @@ export type RoleActionState = {
   message: string;
 };
 
-const VALID_ROLES = ["owner", "admin", "manager", "sales", "content"] as const;
-type ValidRole = (typeof VALID_ROLES)[number];
+/**
+ * Roles that can manage staff must always present a second factor: a stolen
+ * password for one of these accounts is a stolen business.
+ */
+const MFA_ENFORCED_ROLES: readonly StaffRole[] = ["owner", "admin"];
 
-function isValidRole(role: string): role is ValidRole {
-  return (VALID_ROLES as readonly string[]).includes(role);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type Supabase = ReturnType<typeof createAdminClient>;
+
+async function audit(
+  supabase: Supabase,
+  actorId: string,
+  action: string,
+  entityId: string | null,
+  diff?: Record<string, unknown>,
+) {
+  const { error } = await supabase.from("activity_logs").insert({
+    user_id: actorId,
+    action,
+    entity_type: "admin_role",
+    entity_id: entityId,
+    diff: diff ?? null,
+  });
+  if (error) console.error(`[roles] audit write failed for ${action}:`, error.message);
 }
 
 /** List all admin role holders with their profile and auth email */
 export async function getAdminRoles(): Promise<AdminRoleEntry[]> {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
+  await requirePermission("staff.manage");
   const supabase = createAdminClient();
 
   // Fetch roles without relying on the PostgREST relationship cache
@@ -48,8 +71,7 @@ export async function getAdminRoles(): Promise<AdminRoleEntry[]> {
 
   const userIds = (rolesData ?? []).map((r) => r.user_id);
 
-  // Fetch corresponding profiles
-  let profilesMap = new Map();
+  let profilesMap = new Map<string, { email: string | null; full_name: string | null }>();
   if (userIds.length > 0) {
     const { data: profilesData } = await supabase
       .from("profiles")
@@ -73,49 +95,38 @@ export async function getAdminRoles(): Promise<AdminRoleEntry[]> {
   });
 }
 
-/** Search for a user by email so admin can assign a role */
-export async function searchUserByEmail(
-  email: string,
-): Promise<{ id: string; email: string; fullName: string | null } | null> {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
-
-  const supabase = createAdminClient();
-
-  // Search via profiles table (which has email column)
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("id, email, full_name")
-    .ilike("email", email.trim())
-    .maybeSingle();
-
-  if (profileData) {
-    return {
-      id: profileData.id,
-      email: profileData.email ?? email,
-      fullName: profileData.full_name,
-    };
+/**
+ * Finds an account by exact email in Supabase Auth — the only trustworthy
+ * source. `profiles.email` is NOT used: a signed-up user can edit their own
+ * profile row, so matching on it would let them claim a role meant for
+ * someone else's address.
+ */
+async function findAuthUserByEmail(supabase: Supabase, email: string): Promise<User | null> {
+  const target = email.toLowerCase();
+  const perPage = 1000;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error(`User lookup failed: ${error.message}`);
+    const users = data?.users ?? [];
+    const match = users.find((u) => u.email?.toLowerCase() === target);
+    if (match) return match;
+    if (users.length < perPage) return null;
   }
-
-  // Fallback: search auth.users via admin API
-  const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const match = (listData?.users ?? []).find(
-    (u) => u.email?.toLowerCase() === email.trim().toLowerCase(),
-  );
-
-  if (match) {
-    // Before returning, ensure they exist in the profiles table to prevent foreign key errors
-    // when assigning admin_roles.
-    const { deriveProfileFromUser } = await import("@/lib/auth/profile");
-    await supabase.from("profiles").upsert(deriveProfileFromUser(match), { onConflict: "id" });
-    
-    return {
-      id: match.id,
-      email: match.email!,
-      fullName: match.user_metadata?.full_name ?? null,
-    };
-  }
-
   return null;
+}
+
+async function currentRoleOf(supabase: Supabase, userId: string): Promise<{ role: StaffRole; active: boolean } | null> {
+  const { data } = await supabase.from("admin_roles").select("role, active").eq("user_id", userId).maybeSingle();
+  return data && isStaffRole(data.role) ? { role: data.role, active: data.active } : null;
+}
+
+async function activeOwnerCount(supabase: Supabase): Promise<number> {
+  const { count } = await supabase
+    .from("admin_roles")
+    .select("user_id", { count: "exact", head: true })
+    .eq("role", "owner")
+    .eq("active", true);
+  return count ?? 0;
 }
 
 /** Assign or update an admin role for a user */
@@ -123,88 +134,106 @@ export async function assignAdminRole(
   _prev: RoleActionState,
   formData: FormData,
 ): Promise<RoleActionState> {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
+  const actor = await requirePermission("staff.manage");
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "");
-  const mfaRequired = formData.get("mfaRequired") === "true";
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.length > 254 || !EMAIL_RE.test(email)) {
     return { status: "error", message: "Please enter a valid email address." };
   }
 
-  if (!isValidRole(role)) {
-    return { status: "error", message: `Invalid role "${role}". Allowed: ${VALID_ROLES.join(", ")}.` };
+  if (!isStaffRole(role)) {
+    return { status: "error", message: `Invalid role. Allowed: ${STAFF_ROLES.join(", ")}.` };
   }
 
+  if (!canManageRole(actor.staffRole, role)) {
+    return { status: "error", message: "Only an owner can grant the owner role." };
+  }
+
+  const mfaRequired = MFA_ENFORCED_ROLES.includes(role) || formData.get("mfaRequired") === "true";
   const supabase = createAdminClient();
 
-  // Look up the user
-  const user = await searchUserByEmail(email);
+  let user: User | null;
+  try {
+    user = await findAuthUserByEmail(supabase, email);
+  } catch (err) {
+    console.error("[roles] lookup failed:", err);
+    return { status: "error", message: "Could not look up that account. Please try again." };
+  }
 
   if (!user) {
     // No account yet — store a pending role so it is applied automatically
-    // the first time this person signs in with Google.
+    // the first time this person signs in with Google (a verified address).
     const { error: pendingError } = await supabase
       .from("pending_admin_roles")
       .upsert({ email, role, mfa_required: mfaRequired }, { onConflict: "email" });
 
     if (pendingError) {
-      return {
-        status: "error",
-        message: `Could not save pending role: ${pendingError.message}. Make sure the "pending_admin_roles" table exists in Supabase.`,
-      };
+      console.error("[roles] pending role save failed:", pendingError.message);
+      return { status: "error", message: "Could not save the pending role. Please try again." };
     }
 
+    await audit(supabase, actor.id, "admin_role_pending_created", null, { email, role, mfaRequired });
     revalidatePath("/admin/roles");
     return {
       status: "success",
-      message: `Role "${role}" queued for ${email}. They will automatically get admin access the first time they sign in with Google.`,
+      message: `Role "${role}" queued for ${email}. It is applied the first time they sign in with Google.`,
     };
   }
 
-  // User already has an account — assign the role immediately.
+  if (user.id === actor.id) {
+    return { status: "error", message: "You cannot change your own role." };
+  }
+
+  const existing = await currentRoleOf(supabase, user.id);
+  if (existing && !canManageRole(actor.staffRole, existing.role)) {
+    return { status: "error", message: "Only an owner can change another owner's role." };
+  }
+  if (existing?.role === "owner" && existing.active && role !== "owner" && (await activeOwnerCount(supabase)) <= 1) {
+    return { status: "error", message: "The business must keep at least one active owner." };
+  }
+
+  // Ensure the profile row exists (admin_roles.user_id references it).
+  await supabase.from("profiles").upsert(deriveProfileFromUser(user), { onConflict: "id" });
+
   const { error } = await supabase.from("admin_roles").upsert(
-    {
-      user_id: user.id,
-      role,
-      active: true,
-      mfa_required: mfaRequired,
-    },
+    { user_id: user.id, role, active: true, mfa_required: mfaRequired },
     { onConflict: "user_id" },
   );
 
   if (error) {
-    return { status: "error", message: `Failed to assign role: ${error.message}` };
+    console.error("[roles] assign failed:", error.message);
+    return { status: "error", message: "Failed to assign the role. Please try again." };
   }
 
-  // Audit log
-  const actingUser = await requireAdminRole(["owner", "admin", "super_admin"]);
-  await supabase.from("activity_logs").insert({
-    user_id: actingUser.id,
-    action: "admin_role_assigned",
-    entity_type: "admin_role",
-    entity_id: user.id,
-    diff: { email, role, mfaRequired },
+  await audit(supabase, actor.id, "admin_role_assigned", user.id, {
+    email,
+    role,
+    previousRole: existing?.role ?? null,
+    mfaRequired,
   });
 
   revalidatePath("/admin/roles");
 
   return {
     status: "success",
-    message: `Role "${role}" assigned to ${user.email}${user.fullName ? ` (${user.fullName})` : ""} successfully.`,
+    message: `Role "${role}" assigned to ${user.email}.`,
   };
 }
 
 /** List all pending (not-yet-signed-up) role assignments */
 export async function getPendingAdminRoles(): Promise<PendingRoleEntry[]> {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
+  await requirePermission("staff.manage");
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("pending_admin_roles")
     .select("id, email, role, created_at")
     .order("created_at", { ascending: false });
-  if (error) return []; // table may not exist yet — fail silently
+  if (error) {
+    console.error("[roles] pending list failed:", error.message);
+    return [];
+  }
   return (data ?? []).map((r) => ({
     id: r.id,
     email: r.email,
@@ -215,60 +244,54 @@ export async function getPendingAdminRoles(): Promise<PendingRoleEntry[]> {
 
 /** Cancel a pending role invitation */
 export async function cancelPendingRole(id: string): Promise<RoleActionState> {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
+  const actor = await requirePermission("staff.manage");
   const supabase = createAdminClient();
+  const { data: pending } = await supabase.from("pending_admin_roles").select("email, role").eq("id", id).maybeSingle();
+  if (!pending) return { status: "error", message: "That invitation no longer exists." };
+  if (isStaffRole(pending.role) && !canManageRole(actor.staffRole, pending.role)) {
+    return { status: "error", message: "Only an owner can cancel an owner invitation." };
+  }
   const { error } = await supabase.from("pending_admin_roles").delete().eq("id", id);
-  if (error) return { status: "error", message: `Failed to cancel: ${error.message}` };
+  if (error) return { status: "error", message: "Failed to cancel the invitation." };
+  await audit(supabase, actor.id, "admin_role_pending_cancelled", null, { email: pending.email, role: pending.role });
   revalidatePath("/admin/roles");
   return { status: "success", message: "Pending invitation cancelled." };
 }
 
-/** Revoke (deactivate) an admin role */
-export async function revokeAdminRole(userId: string): Promise<RoleActionState> {
-  const actingUser = await requireAdminRole(["owner", "admin", "super_admin"]);
+async function setRoleActive(userId: string, active: boolean): Promise<RoleActionState> {
+  const actor = await requirePermission("staff.manage");
   const supabase = createAdminClient();
 
-  const { error } = await supabase
-    .from("admin_roles")
-    .update({ active: false })
-    .eq("user_id", userId);
-
-  if (error) {
-    return { status: "error", message: `Failed to revoke role: ${error.message}` };
+  if (userId === actor.id) {
+    return { status: "error", message: "You cannot change your own access." };
   }
 
-  await supabase.from("activity_logs").insert({
-    user_id: actingUser.id,
-    action: "admin_role_revoked",
-    entity_type: "admin_role",
-    entity_id: userId,
-  });
+  const existing = await currentRoleOf(supabase, userId);
+  if (!existing) return { status: "error", message: "That staff member was not found." };
+  if (!canManageRole(actor.staffRole, existing.role)) {
+    return { status: "error", message: "Only an owner can change an owner's access." };
+  }
+  if (!active && existing.role === "owner" && existing.active && (await activeOwnerCount(supabase)) <= 1) {
+    return { status: "error", message: "The business must keep at least one active owner." };
+  }
 
+  const { error } = await supabase.from("admin_roles").update({ active }).eq("user_id", userId);
+  if (error) {
+    console.error("[roles] update failed:", error.message);
+    return { status: "error", message: "Failed to update access. Please try again." };
+  }
+
+  await audit(supabase, actor.id, active ? "admin_role_restored" : "admin_role_revoked", userId, { role: existing.role });
   revalidatePath("/admin/roles");
-  return { status: "success", message: "Admin access revoked." };
+  return { status: "success", message: active ? "Admin access restored." : "Admin access revoked." };
+}
+
+/** Revoke (deactivate) an admin role */
+export async function revokeAdminRole(userId: string): Promise<RoleActionState> {
+  return setRoleActive(userId, false);
 }
 
 /** Restore (reactivate) a previously revoked admin role */
 export async function restoreAdminRole(userId: string): Promise<RoleActionState> {
-  const actingUser = await requireAdminRole(["owner", "admin", "super_admin"]);
-  const supabase = createAdminClient();
-
-  const { error } = await supabase
-    .from("admin_roles")
-    .update({ active: true })
-    .eq("user_id", userId);
-
-  if (error) {
-    return { status: "error", message: `Failed to restore role: ${error.message}` };
-  }
-
-  await supabase.from("activity_logs").insert({
-    user_id: actingUser.id,
-    action: "admin_role_restored",
-    entity_type: "admin_role",
-    entity_id: userId,
-  });
-
-  revalidatePath("/admin/roles");
-  return { status: "success", message: "Admin access restored." };
+  return setRoleActive(userId, true);
 }

@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FinanceParams } from "@/lib/domain";
+import { getBusinessProfile } from "@/lib/data/business";
 
 /** Reads from the settings key/value store (SRS §15.7). */
 
@@ -27,24 +28,14 @@ export const getFinanceParams = unstable_cache(
   { revalidate: 3600, tags: ["settings"] },
 );
 
-export const getCompanyProfile = unstable_cache(
-  async (): Promise<Record<string, unknown>> => {
-    const supabase = createAdminClient();
-    const { data } = await supabase.from("settings").select("value").eq("key", "company_profile").maybeSingle();
-    return (data?.value ?? {}) as Record<string, unknown>;
-  },
-  ["company-profile"],
-  { revalidate: 3600, tags: ["settings"] },
-);
-
-export const getPhoneNumbers = unstable_cache(
-  async (): Promise<{ primary: string; whatsapp: string }> => {
-    const supabase = createAdminClient();
-    const { data } = await supabase.from("settings").select("value").eq("key", "phone_numbers").maybeSingle();
-    const v = (data?.value ?? {}) as Record<string, unknown>;
-    // No fallbacks: an unset number must render nothing, never another business's number.
-    return { primary: String(v.primary ?? ""), whatsapp: String(v.whatsapp ?? "") };
-  },
-  ["phone-numbers"],
-  { revalidate: 3600, tags: ["settings"] },
-);
+/**
+ * Phone numbers for call / WhatsApp buttons. A view over the business profile
+ * (Admin → Settings), so the header, footer, vehicle pages, JSON-LD and the
+ * WhatsApp button always show the same numbers. It previously read the raw
+ * settings row on its own, which was blank, so vehicle pages had no call or
+ * WhatsApp buttons while the footer showed a number.
+ */
+export async function getPhoneNumbers(): Promise<{ primary: string; whatsapp: string }> {
+  const business = await getBusinessProfile();
+  return { primary: business.phone, whatsapp: business.whatsapp || business.phone };
+}

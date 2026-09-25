@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLeadList } from "@/lib/data/leads";
 import { LeadsTable } from "./leads-table";
 import type { LeadStatus } from "@/lib/domain";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Leads" };
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ const TABS: { value: string; label: string }[] = [
 ];
 
 export default async function AdminLeadsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requirePermission("leads.view");
   const { status } = await searchParams;
   const active = status ?? "all";
   const leads = await getLeadList({ status: active !== "all" ? (active as LeadStatus) : undefined });

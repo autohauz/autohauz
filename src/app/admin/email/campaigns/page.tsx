@@ -1,86 +1,71 @@
-import { getEmailCampaigns } from "@/lib/data/email-campaigns";
-import { requireAdminRole } from "@/lib/security/auth";
-import { Container } from "@/components/ui/container";
-import { Button, ButtonLink } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Plus, Edit, Send } from "lucide-react";
-import Link from "next/link";
+import { Plus } from "lucide-react";
+import { getEmailCampaigns } from "@/lib/data/email-campaigns";
+import { requirePermission } from "@/lib/security/auth";
+import { Container } from "@/components/ui/container";
+import { ButtonLink } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CAMPAIGN_STATUS } from "@/lib/email/status";
 
-export const metadata = {
-  title: "Email Campaigns | AutoHauz Admin",
-};
+export const metadata = { title: "Email campaigns" };
 
 export default async function EmailCampaignsPage() {
-  await requireAdminRole(["admin", "owner", "content", "sales"]);
+  await requirePermission("email.view");
   const campaigns = await getEmailCampaigns();
 
   return (
     <Container>
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-extrabold text-foreground">Email Campaigns</h1>
-          <p className="text-muted-foreground mt-1">Send marketing emails and track performance.</p>
+          <h1 className="font-heading text-3xl font-extrabold text-foreground">Email campaigns</h1>
+          <p className="mt-1 text-muted-foreground">Send marketing emails to subscribers who have confirmed their consent.</p>
         </div>
         <ButtonLink href="/admin/email/campaigns/new">
-            <Plus className="size-4 mr-2" /> New Campaign
-          </ButtonLink>
+          <Plus className="mr-2 size-4" aria-hidden="true" /> New campaign
+        </ButtonLink>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">Email campaigns</caption>
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Sent / Bounced</th>
-                <th className="px-4 py-3 font-medium">Created / Sent Date</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
+                <th scope="col" className="px-4 py-3 font-medium">Campaign</th>
+                <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                <th scope="col" className="px-4 py-3 font-medium">Delivered</th>
+                <th scope="col" className="px-4 py-3 font-medium">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {campaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                    No campaigns found. Create your first campaign!
+                  <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">
+                    No campaigns yet. Create a template first, then a campaign that uses it.
                   </td>
                 </tr>
               ) : (
-                campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {campaign.name}
-                      <div className="text-xs font-normal text-muted-foreground mt-0.5 truncate max-w-[200px]">
-                        {campaign.subject}
-                      </div>
+                campaigns.map((c) => (
+                  <tr key={c.id} className="transition-colors hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <a href={`/admin/email/campaigns/${c.id}`} className="font-medium text-foreground hover:underline">
+                        {c.name}
+                      </a>
+                      <div className="mt-0.5 max-w-xs truncate text-xs text-muted-foreground">{c.subject}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full \${
-                        campaign.status === "sent" ? "bg-success/10 text-success" : 
-                        campaign.status === "sending" ? "bg-primary/10 text-primary animate-pulse" :
-                        campaign.status === "draft" ? "bg-muted text-muted-foreground" :
-                        "bg-warning/10 text-warning"
-                      }`}>
-                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                      </span>
+                      <Badge variant={CAMPAIGN_STATUS[c.status].variant}>{CAMPAIGN_STATUS[c.status].label}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {campaign.status === "sent" || campaign.status === "sending" ? (
-                        <span>
-                          <span className="text-foreground font-medium">{campaign.sentCount}</span> sent / <span className="text-danger">{campaign.bouncedCount}</span> fail
-                        </span>
-                      ) : "—"}
+                    <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                      {c.status === "sent" || c.status === "sending" ? `${c.sentCount} of ${c.recipientsCount}` : "—"}
+                      {c.unsubscribedCount > 0 ? <span className="block text-xs">{c.unsubscribedCount} unsubscribed</span> : null}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {campaign.sentAt 
-                        ? <>Sent: {format(new Date(campaign.sentAt), "MMM d, yyyy HH:mm")}</>
-                        : <>Created: {format(new Date(campaign.createdAt), "MMM d, yyyy")}</>
-                      }
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <ButtonLink href={`/admin/email/campaigns/\${campaign.id}`} variant="ghost" size="sm"  >
-                          <Edit className="size-4" />
-                        </ButtonLink>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {c.sentAt
+                        ? `Sent ${format(new Date(c.sentAt), "d MMM yyyy, h:mm a")}`
+                        : c.scheduledAt && c.status === "scheduled"
+                          ? `Scheduled ${format(new Date(c.scheduledAt), "d MMM yyyy, h:mm a")}`
+                          : `Created ${format(new Date(c.createdAt), "d MMM yyyy")}`}
                     </td>
                   </tr>
                 ))

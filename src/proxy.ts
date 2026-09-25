@@ -14,12 +14,12 @@
  *   3. Block mutations from missing/suspicious User-Agents on /api.
  *   4. Inject X-Robots-Tag on non-public paths; strip fingerprinting headers.
  *   5. Redirect stray OAuth codes to /auth/callback.
- *   6. 301 lowercase-canonicalise programmatic SEO routes.
- *   7. Authenticate and authorise /admin (defence-in-depth; RLS is the backstop).
+ *   6. Authenticate /admin (signed-out → sign-in); roles are checked per page.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAllowedBot } from "@/lib/security/bots";
+import { buildCsp, generateNonce, isStaffPath } from "@/lib/security/csp";
 import {
   GEO_BLOCKED_PATH,
   evaluateGeoAccess,
@@ -56,7 +56,6 @@ const BAD_BOT_PATTERNS = [
   "claudebot",
   "claude-web",
   "cohere-ai",
-  "google-extended",   // Gemini training (distinct from Googlebot)
   "meta-externalagent",// Meta AI training
   "bytespider",        // TikTok/ByteDance scraper — known DDoS involvement
   "petalbot",          // Huawei — mass crawler
@@ -64,8 +63,6 @@ const BAD_BOT_PATTERNS = [
   "omgili",
 
   // Aggressive SEO / OSINT tools
-  "ahrefsbot",
-  "semrushbot",
   "dotbot",
   "mj12bot",           // Majestic
   "blexbot",
@@ -73,12 +70,10 @@ const BAD_BOT_PATTERNS = [
   "sistrix",
   "seokicks",
   "serpstatbot",
-  "rogerbot",          // Moz — replaced by legitimate moz-search
   "opensiteexplorer",
   "spbot",
   "linkdexbot",
   "seobilitybot",
-  "siteimprovebot",
   "babbar",
   "aboundex",
 
@@ -165,8 +160,17 @@ export async function proxy(request: NextRequest) {
   // ── 1. Hard-block known bad bots ────────────────────────────────────────────
   // Return 403 with no body to minimise response cost and avoid tipping off
   // automated scanners that inspect response bodies for clues.
-  if (isBadBot(ua)) {
+  // Health checks are exempt so uptime monitors (often curl-based) work.
+  if (path !== "/api/health" && isBadBot(ua)) {
     return new NextResponse(null, { status: 403 });
+  }
+
+  // A malformed percent-escape (e.g. "%E0%A4%A") makes Next's router throw while
+  // decoding a dynamic segment, surfacing as a bare 500. It is a bad request.
+  try {
+    decodeURIComponent(path);
+  } catch {
+    return new NextResponse("Bad request", { status: 400, headers: { "X-Robots-Tag": "noindex" } });
   }
 
   // ── 2. Geo restriction: AU + IN only ────────────────────────────────────────
@@ -223,11 +227,36 @@ export async function proxy(request: NextRequest) {
     // (next.config.ts handles the server-rendered path; this covers edge.)
     res.headers.delete("x-powered-by");
     res.headers.delete("server");
-    if (isNonPublicPath) res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    // Private paths, and every page of a Vercel preview deployment (so preview
+    // URLs never compete with production in search results).
+    if (isNonPublicPath || process.env.VERCEL_ENV === "preview") res.headers.set("X-Robots-Tag", "noindex, nofollow");
     return res;
   };
 
-  let response = finalise(NextResponse.next({ request }));
+  // Staff pages (/admin, /auth) get a per-request nonce CSP with no
+  // 'unsafe-inline' scripts. Next.js reads the nonce from the *request* CSP
+  // header while rendering and stamps it on its own <script> tags; the same
+  // policy goes on the response for the browser to enforce. Public pages keep
+  // the static policy from next.config.ts (they are statically rendered).
+  const staffCsp = isStaffPath(path)
+    ? buildCsp({
+        isDev: process.env.NODE_ENV === "development",
+        supabaseOrigin: supabaseOrigin(),
+        nonce: generateNonce(),
+      })
+    : null;
+
+  /** Pass-through response, carrying (possibly refreshed) request cookies and the staff CSP. */
+  const next = () => {
+    if (!staffCsp) return finalise(NextResponse.next({ request }));
+    const headers = new Headers(request.headers);
+    headers.set("Content-Security-Policy", staffCsp);
+    const res = finalise(NextResponse.next({ request: { headers } }));
+    res.headers.set("Content-Security-Policy", staffCsp);
+    return res;
+  };
+
+  let response = next();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -245,7 +274,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
-        response = finalise(NextResponse.next({ request }));
+        response = next();
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
@@ -258,16 +287,6 @@ export async function proxy(request: NextRequest) {
     const callbackUrl = request.nextUrl.clone();
     callbackUrl.pathname = "/auth/callback";
     return NextResponse.redirect(callbackUrl);
-  }
-
-  // ── 6. Strict SEO canonical lowercasing for programmatic routes ──────────────
-  if (
-    (path.startsWith("/locations/") || path.startsWith("/categories/")) &&
-    path !== path.toLowerCase()
-  ) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = path.toLowerCase();
-    return NextResponse.redirect(redirectUrl, 301);
   }
 
   const isAdminRoute =
@@ -286,30 +305,38 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    // [DEMO MODE] Bypass auth redirect so user can view admin panel
-    // const redirectUrl = request.nextUrl.clone();
-    // redirectUrl.pathname = "/auth/sign-in";
-    // redirectUrl.searchParams.set(
-    //   "redirectedFrom",
-    //   request.nextUrl.pathname + request.nextUrl.search,
-    // );
-    // const redirectResponse = NextResponse.redirect(redirectUrl);
-    // response.cookies.getAll().forEach((cookie) => {
-    //   redirectResponse.cookies.set(cookie.name, cookie.value);
-    // });
-    // return redirectResponse;
+    // Signed-out visitors never reach an admin render. This is the first of
+    // three layers: every admin page, Server Action and private data function
+    // also calls `requirePermission()` (layouts alone are not a boundary).
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth/sign-in";
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("redirectedFrom", path + request.nextUrl.search);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+    // Carry any refreshed/cleared auth cookies onto the redirect.
+    response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+    return finalise(redirectResponse);
   }
 
-  // We rely on `requireAdmin()` in `src/app/admin/layout.tsx` to rigorously 
-  // enforce `admin_roles` authorization. Attempting to query the database in 
-  // Edge middleware causes intermittent network timeouts which appear to the 
-  // user as sudden random logouts during navigation.
-  
+  // Role/MFA checks need a database read, which stays out of the edge proxy
+  // (it caused intermittent timeouts); `requirePermission()` does them.
   return response;
+}
+
+function supabaseOrigin(): string | undefined {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).origin : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Static files skip the proxy entirely (no bot/geo/auth work). robots.txt,
+    // sitemap.xml and llms.txt are included on purpose: even a crawler the
+    // proxy would refuse can still read the crawl policy.
+    "/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|txt|xml|webmanifest|csv)$).*)",
   ],
 };

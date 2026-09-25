@@ -6,6 +6,8 @@ import { getLeadDetail } from "@/lib/data/leads";
 import { LeadActions } from "../lead-actions";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_STYLES, LEAD_TYPE_LABELS } from "@/lib/leads/status";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { requirePermission } from "@/lib/security/auth";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 export const metadata = { title: "Lead" };
 export const dynamic = "force-dynamic";
@@ -21,6 +23,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("leads.view");
   const { id } = await params;
   const data = await getLeadDetail(id);
   if (!data) notFound();
@@ -42,7 +45,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
       {/* Quick contact */}
       <div className="flex flex-wrap gap-2">
-        <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"><Phone className="size-4" />{lead.phone}</a>
+        <a href={telHref(lead.phone)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"><Phone className="size-4" aria-hidden="true" />{formatPhoneForDisplay(lead.phone)}</a>
         <a href={buildWhatsAppUrl(lead.phone)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:opacity-90"><MessageCircle className="size-4" />WhatsApp</a>
         {lead.email ? <a href={`mailto:${lead.email}`} className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"><Mail className="size-4" />{lead.email}</a> : null}
       </div>

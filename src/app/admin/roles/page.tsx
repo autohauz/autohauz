@@ -1,5 +1,5 @@
 import { Shield, ShieldAlert } from "lucide-react";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { getAdminRoles } from "./actions";
 import { RolesManager } from "./roles-manager";
 
@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function AdminRolesPage() {
-  await requireAdminRole(["owner", "admin", "super_admin"]);
+  await requirePermission("staff.manage");
 
   const roles = await getAdminRoles();
   const activeCount = roles.filter((r) => r.active).length;
@@ -27,7 +27,7 @@ export default async function AdminRolesPage() {
               Role Management
             </h1>
             <p className="mt-2 text-muted-foreground max-w-2xl font-medium">
-              Manage who has access to the admin portal and what they can do. Only super admins can assign or revoke roles.
+              Manage who has access to the admin portal and what they can do. Owners and admins manage staff; only an owner can grant or remove the owner role.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -42,10 +42,10 @@ export default async function AdminRolesPage() {
       {/* Role permissions reference */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { role: "Sales", desc: "Work leads, assign to self, quick-change vehicle status", icon: "💬", color: "border-info/20 bg-info-soft" },
-          { role: "Content", desc: "Manage FAQs and testimonials", icon: "📝", color: "border-accent/20 bg-accent-soft" },
-          { role: "Manager", desc: "Manage inventory, leads, content & view reports", icon: "📊", color: "border-success/20 bg-success-soft" },
-          { role: "Admin / Owner", desc: "Full control including settings and role management", icon: "👑", color: "border-warning/20 bg-warning-soft" },
+          { role: "Sales", desc: "Inventory edits, leads, draft & issue invoices, record payments", icon: "💬", color: "border-info/20 bg-info-soft" },
+          { role: "Content", desc: "Blog, FAQs, testimonials and email drafts", icon: "📝", color: "border-accent/20 bg-accent-soft" },
+          { role: "Manager", desc: "Everything sales can do, plus deletes, invoice void, bulk upload and settings", icon: "📊", color: "border-success/20 bg-success-soft" },
+          { role: "Admin / Owner", desc: "Full control incl. staff, audit log and campaign sends (MFA enforced)", icon: "👑", color: "border-warning/20 bg-warning-soft" },
         ].map((item) => (
           <div key={item.role} className={`rounded-2xl border p-4 ${item.color}`}>
             <div className="text-2xl mb-2">{item.icon}</div>
@@ -61,8 +61,8 @@ export default async function AdminRolesPage() {
         <div className="text-sm">
           <p className="font-semibold text-warning-foreground">Important security notes</p>
           <ul className="mt-1.5 space-y-1 text-warning-foreground list-disc list-inside">
-            <li>Users must already have an account on the platform before you can grant access</li>
-            <li>MFA (multi-factor authentication) is strongly recommended for all admin roles</li>
+            <li>Emails without an account get a pending role, applied when they first sign in with Google</li>
+            <li>MFA is enforced for owner and admin; recommended for every role</li>
             <li>Revoked access can be restored — users are never deleted from this table</li>
             <li>All role changes are logged in the Audit trail</li>
           </ul>

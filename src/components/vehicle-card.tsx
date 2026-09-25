@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { MapPin } from "lucide-react";
 import type { VehicleListItem } from "@/lib/domain";
 import { FUEL_LABELS, TRANSMISSION_LABELS, formatKm, formatPrice } from "@/lib/nav";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { AlertCircle, Check, Phone, MessageCircle } from "lucide-react";
 import { Field as UiField } from "@/components/ui/field";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select as UiSelect } from "@/components/ui/select";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 /*
  * Shared pieces for every lead form (enquiry, inspection, finance, sell,
@@ -64,20 +65,41 @@ export function Honeypot({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
-export function ConsentCheckbox({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
+export function ConsentCheckbox({
+  checked,
+  onChange,
+  error,
+  children,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  /** Shown under the box and linked to it, so the reason is announced on focus. */
+  error?: string | null;
+  children: ReactNode;
+}) {
   const id = useId();
+  const errorId = `${id}-error`;
   return (
-    <div className="flex items-start gap-3">
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-5 shrink-0 rounded-sm border-input accent-accent"
-      />
-      <label htmlFor={id} className="text-sm leading-snug text-body">
-        {children}
-      </label>
+    <div>
+      <div className="flex items-start gap-3">
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          className="mt-0.5 size-5 shrink-0 rounded-sm border-input accent-accent"
+        />
+        <label htmlFor={id} className="text-sm leading-snug text-body">
+          {children}
+        </label>
+      </div>
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1.5 pl-8 text-sm font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -117,18 +139,27 @@ export function LeadSuccess({
   phone?: string | null;
   whatsappUrl?: string | null;
 }) {
+  // The form this replaces held focus; move it to the confirmation so keyboard
+  // and screen-reader users land on the result instead of the page body.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <div role="status" className="rounded-lg border border-success/30 bg-success-soft p-6 text-center">
       <div className="mx-auto mb-3 inline-flex size-12 items-center justify-center rounded-full bg-success text-white" aria-hidden="true">
         <Check className="size-6" />
       </div>
-      <h3 className="text-lg font-semibold text-foreground">{heading}</h3>
+      <h3 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground focus:outline-none">
+        {heading}
+      </h3>
       <p className="mt-1 text-sm text-body">We&apos;ll get back to you as soon as we can during business hours.</p>
       {phone || whatsappUrl ? (
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
           {phone ? (
-            <a href={`tel:${phone.replace(/\s+/g, "")}`} className={cn(buttonVariants({ variant: "outline" }))}>
-              <Phone aria-hidden="true" /> Call {phone}
+            <a href={telHref(phone)} className={cn(buttonVariants({ variant: "outline" }))}>
+              <Phone aria-hidden="true" /> Call {formatPhoneForDisplay(phone)}
             </a>
           ) : null}
           {whatsappUrl ? (

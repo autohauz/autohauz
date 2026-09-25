@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Phone, Mail, MapPin, Clock, ArrowRight, ExternalLink } from "lucide-react";
 import { getMakes } from "@/lib/data/inventory";
 import { getBusinessProfile } from "@/lib/data/business";
+import { getBlogArticles } from "@/lib/data/blog";
 import { BrandLogo } from "@/components/brand-logo";
 import { Container } from "@/components/ui/container";
 import { NAV_BODY_TYPES, BODY_TYPE_LABELS, bodyTypeHref, makeHref } from "@/lib/nav";
 import { socialProfiles, type SocialNetwork } from "@/lib/social-links";
 import { site } from "@/config/site";
 import { formatAddress, hasAddress } from "@/config/business";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 const COMPANY_LINKS = [
   { href: "/about", label: "About us" },
@@ -73,11 +75,21 @@ const SocialIcon = ({ network, className }: { network: SocialNetwork; className?
 };
 
 export async function SiteFooter() {
-  const [makes, business] = await Promise.all([getMakes(), getBusinessProfile()]);
+  const [makes, business, articles] = await Promise.all([
+    getMakes(),
+    getBusinessProfile(),
+    getBlogArticles({ status: "published", limit: 1 }),
+  ]);
+  // Link the blog only once it has something to read.
+  const companyLinks = articles.length > 0 ? [...COMPANY_LINKS, { href: "/blog", label: "Blog" }] : COMPANY_LINKS;
   const popularMakes = makes.filter((m) => m.isPopular).slice(0, 8);
   const name = business.tradingName || site.brandName;
   const address = formatAddress(business.address);
-  const mapQuery = hasAddress(business.address) ? encodeURIComponent(address) : null;
+  // A search link rather than an embedded map: the Maps iframe pulled ~1 MB of
+  // third-party script into every public page. /contact keeps the live map.
+  const directionsUrl = hasAddress(business.address)
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
   const hours = DAYS.filter(([key]) => business.hours[key]);
   const socials = socialProfiles(business.social);
   const year = new Date().getFullYear();
@@ -94,53 +106,62 @@ export async function SiteFooter() {
             <p className="mt-6 text-[13px] leading-[1.6] text-white/70">
               Quality used cars, inspected before listing and priced transparently. Enquire online, arrange an inspection or talk to us about finance and trade-ins.
             </p>
-            <ul className="mt-6 flex flex-col gap-4">
-              <li>
-                <a href={business.phone ? `tel:${business.phone.replace(/\s+/g, "")}` : "#"} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
-                  <Phone className="size-4 text-[#2B8BF6]" />
-                  {business.phone || "+61492962418"}
-                </a>
-              </li>
-              <li>
-                <a href={business.email ? `mailto:${business.email}` : "#"} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
-                  <Mail className="size-4 text-[#2B8BF6]" />
-                  {business.email || "info@jashire.com.au"}
-                </a>
-              </li>
-            </ul>
-            <hr className="my-6 border-white/10" />
-            <div className="flex items-start gap-3">
-              <Clock className="mt-0.5 size-[18px] text-[#2B8BF6] shrink-0" />
-              <dl className="grid grid-cols-[80px_1fr] gap-y-1.5 text-[13px]">
-                <div className="contents"><dt className="text-white/70">Mon - Fri</dt><dd className="text-white">9:00am - 6:00pm</dd></div>
-                <div className="contents"><dt className="text-white/70">Sat</dt><dd className="text-white">9:00am - 5:00pm</dd></div>
-                <div className="contents"><dt className="text-white/70">Sun</dt><dd className="text-white/40">Closed</dd></div>
-              </dl>
-            </div>
-            
-            <hr className="my-6 border-white/10" />
-            <div>
-              <h2 className="mb-4 text-[14px] font-bold text-white">Follow us</h2>
-              <ul className="flex flex-wrap gap-3">
-                {socials.length > 0 ? socials.map((s) => (
-                  <li key={s.network}>
-                    <a href={s.url} target="_blank" rel="noopener noreferrer" className="flex size-[38px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-[#2B8BF6]">
-                      <span className="sr-only">{s.network}</span>
-                      <SocialIcon network={s.network} className="size-[18px]" />
+            {/* Contact details come only from the business profile (Admin → Settings). */}
+            {business.phone || business.email ? (
+              <ul className="mt-6 flex flex-col gap-4">
+                {business.phone ? (
+                  <li>
+                    <a href={telHref(business.phone)} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
+                      <Phone className="size-4 text-[#2B8BF6]" aria-hidden="true" />
+                      {formatPhoneForDisplay(business.phone)}
                     </a>
                   </li>
-                )) : (
-                  ["facebook", "instagram", "x", "youtube", "linkedin"].map(network => (
-                    <li key={network}>
-                      <a href="#" className="flex size-[38px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-[#2B8BF6]">
-                        <span className="sr-only">{network}</span>
-                        <SocialIcon network={network as SocialNetwork} className="size-[18px]" />
-                      </a>
-                    </li>
-                  ))
-                )}
+                ) : null}
+                {business.email ? (
+                  <li>
+                    <a href={`mailto:${business.email}`} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
+                      <Mail className="size-4 text-[#2B8BF6]" aria-hidden="true" />
+                      {business.email}
+                    </a>
+                  </li>
+                ) : null}
               </ul>
-            </div>
+            ) : null}
+            {hours.length > 0 ? (
+              <>
+                <hr className="my-6 border-white/10" />
+                <div className="flex items-start gap-3">
+                  <Clock className="mt-0.5 size-[18px] text-[#2B8BF6] shrink-0" aria-hidden="true" />
+                  <dl className="grid grid-cols-[48px_1fr] gap-y-1.5 text-[13px]" aria-label="Opening hours">
+                    {hours.map(([key, label]) => (
+                      <div key={key} className="contents">
+                        <dt className="text-white/70">{label}</dt>
+                        <dd className="text-white">{business.hours[key]}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </>
+            ) : null}
+
+            {socials.length > 0 ? (
+              <>
+                <hr className="my-6 border-white/10" />
+                <div>
+                  <h2 className="mb-4 text-[14px] font-bold text-white">Follow us</h2>
+                  <ul className="flex flex-wrap gap-3">
+                    {socials.map((s) => (
+                      <li key={s.network}>
+                        <a href={s.url} target="_blank" rel="noopener noreferrer" className="flex size-[38px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-[#2B8BF6]">
+                          <span className="sr-only">{name} on {s.network}</span>
+                          <SocialIcon network={s.network} className="size-[18px]" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : null}
           </div>
 
           {/* Middle Column */}
@@ -150,18 +171,9 @@ export async function SiteFooter() {
               <div>
                 <h2 className="mb-5 text-[15px] font-bold text-white">Browse by make</h2>
                 <ul className="flex flex-col gap-3.5">
-                  {popularMakes.length > 0 ? popularMakes.map((m) => (
+                  {popularMakes.map((m) => (
                     <li key={m.slug}><Link href={makeHref(m.slug)} className="text-[14px] text-white/70 hover:text-white transition-colors">{m.name}</Link></li>
-                  )) : (
-                    <>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Ford</Link></li>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Hyundai</Link></li>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Kia</Link></li>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Mazda</Link></li>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Mitsubishi</Link></li>
-                      <li><Link href="#" className="text-[14px] text-white/70 hover:text-white transition-colors">Toyota</Link></li>
-                    </>
-                  )}
+                  ))}
                   <li className="pt-1">
                     <Link href="/used-cars" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#2B8BF6] hover:text-[#2B8BF6]/80 transition-colors">
                       All cars <ArrowRight className="size-4" />
@@ -182,7 +194,7 @@ export async function SiteFooter() {
               <div>
                 <h2 className="mb-5 text-[15px] font-bold text-white">Company</h2>
                 <ul className="flex flex-col gap-3.5">
-                  {COMPANY_LINKS.map((l) => (
+                  {companyLinks.map((l) => (
                     <li key={l.href}><Link href={l.href} className="text-[14px] text-white/70 hover:text-white transition-colors">{l.label}</Link></li>
                   ))}
                 </ul>
@@ -191,29 +203,26 @@ export async function SiteFooter() {
           </div>
 
           {/* Right Column */}
-          <div className="flex flex-col border-l border-white/10 pl-8 lg:pl-12 lg:ml-[-1rem]">
-            <h2 className="mb-5 text-[15px] font-bold text-white">Our location</h2>
-            {mapQuery ? (
-              <iframe
-                title="Location Map"
-                className="w-full rounded-lg shadow-inner border-0"
-                style={{ minHeight: '260px' }}
-                loading="lazy"
-                allowFullScreen
-                src={`https://maps.google.com/maps?q=${mapQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-lg bg-[#243757]/60 p-8 text-center shadow-inner" style={{ minHeight: '260px' }}>
-                <MapPin className="mb-4 size-7 text-white/80 stroke-[1.5]" />
-                <h3 className="text-[15px] font-semibold text-white">Location Map</h3>
-                <p className="mt-2 text-[13px] text-white/70">Showroom location and directions</p>
-              </div>
-            )}
-            <a href="https://maps.app.goo.gl/4ADouoQNkHQPd1go7" target="_blank" rel="noopener noreferrer" className="mt-4 flex h-[46px] w-[200px] items-center justify-center gap-2 rounded-md border border-white/20 bg-transparent text-[14px] font-medium text-white transition-colors hover:bg-white/10">
-              <MapPin className="size-4" />
-              Get Directions <ExternalLink className="size-4" />
-            </a>
-          </div>
+          {address ? (
+            <div className="flex flex-col lg:border-l lg:border-white/10 lg:pl-12 lg:ml-[-1rem]">
+              <h2 className="mb-5 text-[15px] font-bold text-white">Our location</h2>
+              <address className="flex items-start gap-3 rounded-lg bg-white/5 p-6 text-[14px] not-italic leading-relaxed text-white">
+                <MapPin className="mt-0.5 size-5 shrink-0 text-[#2B8BF6]" aria-hidden="true" />
+                <span>
+                  {business.address.street}
+                  <br />
+                  {`${business.address.suburb} ${business.address.state} ${business.address.postcode}`.trim()}
+                </span>
+              </address>
+              {directionsUrl ? (
+                <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex h-[46px] w-fit items-center justify-center gap-2 rounded-md border border-white/20 px-5 text-[14px] font-medium text-white transition-colors hover:bg-white/10">
+                  <MapPin className="size-4" aria-hidden="true" />
+                  Get directions <ExternalLink className="size-4" aria-hidden="true" />
+                  <span className="sr-only">(opens Google Maps in a new tab)</span>
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* Bottom Bar */}

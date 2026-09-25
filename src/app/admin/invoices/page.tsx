@@ -4,6 +4,7 @@ import { getInvoiceList, getInvoicesKPIs } from "@/lib/data/invoices";
 import { InvoicesTable } from "./invoices-table";
 import { Card, CardContent } from "@/components/ui/card";
 import type { InvoiceStatus } from "@/lib/domain";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Invoices" };
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ function formatCurrency(cents: number) {
 }
 
 export default async function AdminInvoicesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requirePermission("invoices.view");
   const { status } = await searchParams;
   const active = status ?? "all";
   

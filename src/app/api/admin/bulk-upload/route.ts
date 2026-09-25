@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTags } from "@/lib/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireApiAdmin } from "@/lib/security/auth";
+import { requireApiPermission } from "@/lib/security/auth";
 import * as xlsx from "xlsx";
 import { vehicleCsvRowSchema } from "@/lib/validation/vehicle";
 
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Same admin policy as every other admin surface (allowlist OR platform
     // role OR active admin_roles row) — previously re-implemented inline here
     // and silently ignored two of the three paths.
-    const { user, response: denied } = await requireApiAdmin();
+    const { user, response: denied } = await requireApiPermission("inventory.bulk");
     if (!user) return denied;
 
     const declaredLength = Number(request.headers.get("content-length") ?? 0);

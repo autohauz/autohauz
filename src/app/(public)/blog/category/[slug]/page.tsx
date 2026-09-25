@@ -3,8 +3,16 @@ import { Container } from "@/components/ui/container";
 import { ArticleCard } from "@/components/blog/article-card";
 import { pageMetadata } from "@/lib/seo/metadata";
 import Link from "next/link";
-import { site } from "@/config/site";
 import { notFound } from "next/navigation";
+
+export const revalidate = 300;
+
+// No pages are pre-built; each one is rendered on its first request and then
+// served from cache until `revalidate` (on-demand ISR). Without this, a
+// dynamic segment is rendered on every request and `revalidate` is ignored.
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
   const params = await props.params;
@@ -14,9 +22,9 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   if (!category) return {};
 
   return pageMetadata({
-    path: `/blog/category/\${category.slug}`,
-    title: `\${category.name} Articles | \${site.brandName} Blog`,
-    description: `Read our latest articles and advice on \${category.name}.`,
+    path: `/blog/category/${category.slug}`,
+    title: `${category.name} articles`,
+    description: `Read our latest articles and advice on ${category.name}.`,
   });
 }
 
@@ -33,7 +41,7 @@ export default async function BlogCategoryPage(props: { params: Promise<{ slug: 
   const articles = await getBlogArticles({ status: "published", categoryId: category.id });
 
   return (
-    <main className="py-12 md:py-20 bg-background min-h-screen">
+    <>
       <Container>
         <div className="max-w-3xl mb-12">
           <Link href="/blog" className="text-primary hover:underline text-sm font-semibold mb-4 inline-block">
@@ -47,7 +55,7 @@ export default async function BlogCategoryPage(props: { params: Promise<{ slug: 
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-12">
+        <nav aria-label="Blog categories" className="mb-12 flex flex-wrap gap-2">
           <Link 
             href="/blog" 
             className="px-4 py-2 bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground rounded-full text-sm font-semibold transition-colors"
@@ -57,8 +65,8 @@ export default async function BlogCategoryPage(props: { params: Promise<{ slug: 
           {categories.map((c) => (
             <Link 
               key={c.id} 
-              href={`/blog/category/\${c.slug}`}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors \${
+              href={`/blog/category/${c.slug}`}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
                 c.id === category.id 
                   ? "bg-primary text-primary-foreground shadow-sm" 
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
@@ -67,7 +75,7 @@ export default async function BlogCategoryPage(props: { params: Promise<{ slug: 
               {c.name}
             </Link>
           ))}
-        </div>
+        </nav>
 
         {articles.length === 0 ? (
           <div className="text-center py-20 bg-card border border-border rounded-2xl">
@@ -82,6 +90,6 @@ export default async function BlogCategoryPage(props: { params: Promise<{ slug: 
           </div>
         )}
       </Container>
-    </main>
+    </>
   );
 }

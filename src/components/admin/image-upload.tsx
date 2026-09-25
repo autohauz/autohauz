@@ -277,7 +277,7 @@ export function ImageUpload({ initialImages = [] }: { initialImages?: UploadedIm
               </div>
 
               {img.isCover && (
-                <div className="absolute top-2 left-2 bg-primary text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
                   <ImageIcon className="size-3" /> COVER
                 </div>
               )}

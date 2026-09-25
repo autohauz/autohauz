@@ -36,7 +36,7 @@ export function InventoryTable({ data }: InventoryTableProps) {
         <>
           <span className="font-medium text-foreground">{val as string}</span>
           {(row.isFeatured as boolean) ? (
-            <Star className="ml-1 inline size-3.5 fill-warning text-warning" />
+            <Star className="ml-1 inline size-3.5 fill-warning text-warning" role="img" aria-label="Featured" />
           ) : null}
         </>
       ),
@@ -69,10 +69,10 @@ export function InventoryTable({ data }: InventoryTableProps) {
     },
     {
       key: "id",
-      label: "",
+      label: "Actions",
       render: (val, row) => (
         <div className="text-right">
-          <InventoryRowActions vehicleId={val as string} currentStatus={row.status as string} />
+          <InventoryRowActions vehicleId={val as string} vehicleTitle={row.title as string} currentStatus={row.status as string} />
         </div>
       ),
     },

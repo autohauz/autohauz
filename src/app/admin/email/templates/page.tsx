@@ -1,17 +1,16 @@
 import { getEmailTemplates } from "@/lib/data/email-campaigns";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { Container } from "@/components/ui/container";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Plus, Edit } from "lucide-react";
-import Link from "next/link";
 
 export const metadata = {
-  title: "Email Templates | AutoHauz Admin",
+  title: "Email templates",
 };
 
 export default async function EmailTemplatesPage() {
-  await requireAdminRole(["admin", "owner", "content"]);
+  await requirePermission("email.view");
   const templates = await getEmailTemplates();
 
   return (
@@ -19,7 +18,7 @@ export default async function EmailTemplatesPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-heading font-extrabold text-foreground">Email Templates</h1>
-          <p className="text-muted-foreground mt-1">Manage HTML templates for your marketing campaigns.</p>
+          <p className="text-muted-foreground mt-1">Reusable content for marketing campaigns.</p>
         </div>
         <ButtonLink href="/admin/email/templates/new">
             <Plus className="size-4 mr-2" /> New Template
@@ -31,10 +30,10 @@ export default async function EmailTemplatesPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Subject Line</th>
-                <th className="px-4 py-3 font-medium">Last Updated</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
+                <th scope="col" className="px-4 py-3 font-medium">Name</th>
+                <th scope="col" className="px-4 py-3 font-medium">Subject Line</th>
+                <th scope="col" className="px-4 py-3 font-medium">Last Updated</th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -54,12 +53,12 @@ export default async function EmailTemplatesPage() {
                       {template.subject}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {format(new Date(template.updatedAt), "MMM d, yyyy")}
+                      {format(new Date(template.updatedAt), "d MMM yyyy")}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ButtonLink href={`/admin/email/templates/\${template.id}`} variant="ghost" size="sm"  >
-                          <Edit className="size-4" />
-                        </ButtonLink>
+                      <ButtonLink href={`/admin/email/templates/${template.id}`} variant="ghost" size="sm" aria-label={`Edit template ${template.name}`}>
+                        <Edit className="size-4" aria-hidden="true" />
+                      </ButtonLink>
                     </td>
                   </tr>
                 ))

@@ -1,23 +1,31 @@
-import { Container } from "@/components/ui/container";
-import { Button, ButtonLink } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { Container } from "@/components/ui/container";
+import { ButtonLink } from "@/components/ui/button";
 
 export const metadata = {
-  title: "Unsubscribed | AutoHauz",
+  title: "Unsubscribed",
+  robots: { index: false, follow: false },
 };
 
 export default function UnsubscribedConfirmedPage() {
   return (
-    <Container className="py-20 max-w-lg mx-auto">
-      <div className="bg-card border border-border p-10 rounded-2xl text-center shadow-sm flex flex-col items-center">
-        <CheckCircle2 className="size-16 text-success mb-6" />
-        <h1 className="text-3xl font-heading font-extrabold text-foreground mb-4">You've been unsubscribed</h1>
-        <p className="text-muted-foreground mb-8">
-          We've successfully updated your email preferences. You will no longer receive marketing emails from us.
-        </p>
-        <ButtonLink href="/" variant="outline">Return to Homepage</ButtonLink>
-      </div>
-    </Container>
+    <>
+      <SiteHeader />
+      <main id="main">
+        <Container className="max-w-lg py-16 sm:py-20">
+          <div role="status" className="flex flex-col items-center rounded-2xl border border-border bg-card p-10 text-center shadow-card">
+            <CheckCircle2 className="mb-6 size-14 text-success" aria-hidden="true" />
+            <h1 className="mb-4 text-2xl font-bold text-foreground">You&apos;ve been unsubscribed</h1>
+            <p className="mb-8 text-muted-foreground">You won&apos;t receive any more marketing emails from us.</p>
+            <ButtonLink href="/" variant="outline">
+              Back to the homepage
+            </ButtonLink>
+          </div>
+        </Container>
+      </main>
+      <SiteFooter />
+    </>
   );
 }

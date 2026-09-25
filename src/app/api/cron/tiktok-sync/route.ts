@@ -17,7 +17,8 @@ export async function GET(request: Request) {
     .limit(10); // batch size
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[cron:tiktok-sync] query failed:", error.message);
+    return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
 
   let processedCount = 0;

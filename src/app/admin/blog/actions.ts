@@ -1,156 +1,159 @@
 "use server";
 
 import { updateTags } from "@/lib/cache";
-import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
+import { blogArticleFromForm, blogArticleSchema, blogCategorySchema, type BlogArticleInput } from "@/lib/validation/blog";
+import { sanitizeArticleHtml, wordCount } from "@/lib/content/sanitize";
+import { articleCanonicalPath } from "@/lib/seo/blog";
 import { slugify } from "@/lib/utils";
-import type { BlogStatus } from "@/lib/domain";
 
-// Validation helper (simple check for required fields)
-function validateArticle(data: FormData) {
-  const title = data.get("title")?.toString().trim();
-  const slug = data.get("slug")?.toString().trim() || slugify(title || "");
-  const body = data.get("body")?.toString().trim();
-  const categoryId = data.get("categoryId")?.toString() || null;
-  const status = (data.get("status")?.toString() || "draft") as BlogStatus;
+export type BlogActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
-  if (!title || !slug || !body) {
-    throw new Error("Title, slug, and body are required.");
-  }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type Supabase = ReturnType<typeof createAdminClient>;
+
+function fail(context: string, error: { code?: string; message: string }): BlogActionResult {
+  if (error.code === "23505") return { ok: false, error: "That slug is already used by another article." };
+  console.error(`[blog] ${context}:`, error.message);
+  return { ok: false, error: `Could not ${context}. Please try again.` };
+}
+
+function parseArticle(form: FormData): { ok: true; data: BlogArticleInput } | { ok: false; error: string } {
+  const parsed = blogArticleSchema({ supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL }).safeParse(blogArticleFromForm(form));
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid article" };
+  return { ok: true, data: parsed.data };
+}
+
+/**
+ * Columns written for an article. The body is sanitised HERE, on the server,
+ * so the database never holds unsafe HTML. The canonical is normalised to a
+ * same-site path (an off-site canonical would de-index the post).
+ */
+function articleColumns(d: BlogArticleInput, publishedAt: string | null) {
+  const body = sanitizeArticleHtml(d.body);
   return {
-    title,
-    slug,
+    title: d.title,
+    slug: d.slug,
     body,
-    excerpt: data.get("excerpt")?.toString().trim() || null,
-    featured_image_url: data.get("featuredImageUrl")?.toString() || null,
-    featured_image_alt: data.get("featuredImageAlt")?.toString().trim() || null,
-    social_image_url: data.get("socialImageUrl")?.toString() || null,
-    canonical_url: data.get("canonicalUrl")?.toString().trim() || null,
-    category_id: categoryId,
-    status,
-    meta_title: data.get("metaTitle")?.toString().trim() || null,
-    meta_description: data.get("metaDescription")?.toString().trim() || null,
-    reading_time_minutes: Math.max(1, Math.ceil(body.split(/\s+/).length / 200)),
-    published_at: status === "published" ? new Date().toISOString() : null,
-    scheduled_at: status === "scheduled" && data.get("scheduledAt") ? new Date(data.get("scheduledAt")!.toString()).toISOString() : null,
+    excerpt: d.excerpt,
+    featured_image_url: d.featuredImageUrl,
+    featured_image_alt: d.featuredImageAlt,
+    canonical_url: d.canonicalUrl ? articleCanonicalPath({ slug: d.slug, canonicalUrl: d.canonicalUrl }) : null,
+    category_id: d.categoryId,
+    status: d.status,
+    meta_title: d.metaTitle,
+    meta_description: d.metaDescription,
+    author_name: d.authorName,
+    reading_time_minutes: Math.max(1, Math.ceil(wordCount(body) / 200)),
+    // First publication date is kept on later edits and republishing.
+    published_at: d.status === "published" ? publishedAt ?? new Date().toISOString() : publishedAt,
+    scheduled_at: d.status === "scheduled" && d.scheduledAt ? new Date(d.scheduledAt).toISOString() : null,
   };
 }
 
-export async function createBlogArticle(formData: FormData) {
-  const user = await requireAdminRole(["content", "owner", "admin"]);
-  const supabase = createAdminClient();
-
-  let articleId: string;
-  try {
-    const payload = validateArticle(formData);
-    
-    // Auto-assign author if not provided
-    const authorId = user.id;
-    const authorName = formData.get("authorName")?.toString().trim() || null;
-
-    const { data, error } = await supabase
-      .from("blog_articles")
-      .insert({
-        ...payload,
-        author_id: authorId,
-        author_name: authorName,
-      })
-      .select("id")
-      .single();
-
-    if (error) throw new Error(error.message);
-    articleId = data.id;
-
-  } catch (error: any) {
-    return { error: error.message || "Failed to create article" };
-  }
-
-  updateTags("blog_articles");
-  redirect(`/admin/blog/${articleId}`);
+async function audit(supabase: Supabase, actorId: string, action: string, id: string, diff: Record<string, unknown> = {}) {
+  const { error } = await supabase
+    .from("activity_logs")
+    .insert({ user_id: actorId, action, entity_type: "blog_article", entity_id: id, diff });
+  if (error) console.error(`[blog] audit "${action}" failed:`, error.message);
 }
 
-export async function updateBlogArticle(id: string, formData: FormData) {
-  await requireAdminRole(["content", "owner", "admin"]);
+export async function createBlogArticle(formData: FormData): Promise<BlogActionResult> {
+  const user = await requirePermission("content.write");
+  const parsed = parseArticle(formData);
+  if (!parsed.ok) return parsed;
+
   const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("blog_articles")
+    .insert({ ...articleColumns(parsed.data, null), author_id: user.id })
+    .select("id")
+    .single();
+  if (error || !data) return fail("create the article", error ?? { message: "no row returned" });
 
-  try {
-    const payload = validateArticle(formData);
-    const authorName = formData.get("authorName")?.toString().trim() || null;
-
-    // Preserve original published_at if already published
-    if (payload.status === "published") {
-      delete (payload as any).published_at; // we don't overwrite if it was already published, unless we want to "re-publish"
-      // we can fetch the existing to check, but for simplicity, we just update updated_at
-    }
-
-    const { error } = await supabase
-      .from("blog_articles")
-      .update({
-        ...payload,
-        author_name: authorName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) throw new Error(error.message);
-  } catch (error: any) {
-    return { error: error.message || "Failed to update article" };
-  }
-
+  await audit(supabase, user.id, "blog_article_created", data.id, { status: parsed.data.status });
   updateTags("blog_articles");
-  updateTags("blog_article_slug"); // specific article cache tag
-  return { success: true };
+  return { ok: true, id: data.id };
 }
 
-export async function deleteBlogArticle(id: string) {
-  await requireAdminRole(["owner", "admin"]);
+export async function updateBlogArticle(id: string, formData: FormData): Promise<BlogActionResult> {
+  const user = await requirePermission("content.write");
+  if (!UUID.test(id)) return { ok: false, error: "Article not found" };
+  const parsed = parseArticle(formData);
+  if (!parsed.ok) return parsed;
+
+  const supabase = createAdminClient();
+  const { data: existing, error: readError } = await supabase
+    .from("blog_articles")
+    .select("published_at, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) return fail("load the article", readError);
+  if (!existing) return { ok: false, error: "Article not found" };
+
+  const { error } = await supabase
+    .from("blog_articles")
+    .update({ ...articleColumns(parsed.data, existing.published_at), updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return fail("save the article", error);
+
+  if (existing.status !== parsed.data.status) {
+    await audit(supabase, user.id, "blog_article_status_changed", id, { from: existing.status, to: parsed.data.status });
+  }
+  updateTags("blog_articles");
+  return { ok: true, id };
+}
+
+export async function deleteBlogArticle(id: string): Promise<BlogActionResult> {
+  const user = await requirePermission("content.delete");
+  if (!UUID.test(id)) return { ok: false, error: "Article not found" };
   const supabase = createAdminClient();
 
+  const { data: existing } = await supabase.from("blog_articles").select("title, slug").eq("id", id).maybeSingle();
   const { error } = await supabase.from("blog_articles").delete().eq("id", id);
-  if (error) {
-    return { error: error.message || "Failed to delete article" };
-  }
+  if (error) return fail("delete the article", error);
 
+  await audit(supabase, user.id, "blog_article_deleted", id, existing ?? {});
   updateTags("blog_articles");
-  redirect("/admin/blog");
+  return { ok: true };
 }
 
-export async function createBlogCategory(formData: FormData) {
-  await requireAdminRole(["content", "owner", "admin"]);
-  const supabase = createAdminClient();
-  const name = formData.get("name")?.toString().trim();
-  const slug = formData.get("slug")?.toString().trim() || slugify(name || "");
+export async function createBlogCategory(formData: FormData): Promise<BlogActionResult> {
+  await requirePermission("content.write");
+  const parsed = blogCategorySchema.safeParse({
+    name: formData.get("name")?.toString() ?? "",
+    slug: formData.get("slug")?.toString() || slugify(formData.get("name")?.toString() ?? ""),
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid category" };
 
-  if (!name || !slug) return { error: "Name and slug are required" };
-
-  const { error } = await supabase.from("blog_categories").insert({ name, slug });
-  if (error) return { error: error.message };
+  const { error } = await createAdminClient().from("blog_categories").insert(parsed.data);
+  if (error) return error.code === "23505" ? { ok: false, error: "That category already exists." } : fail("create the category", error);
   updateTags("blog_categories");
-  return { success: true };
+  return { ok: true };
 }
 
-export async function updateBlogCategory(id: string, formData: FormData) {
-  await requireAdminRole(["content", "owner", "admin"]);
-  const supabase = createAdminClient();
-  const name = formData.get("name")?.toString().trim();
-  const slug = formData.get("slug")?.toString().trim();
+export async function updateBlogCategory(id: string, formData: FormData): Promise<BlogActionResult> {
+  await requirePermission("content.write");
+  if (!UUID.test(id)) return { ok: false, error: "Category not found" };
+  const parsed = blogCategorySchema.safeParse({
+    name: formData.get("name")?.toString() ?? "",
+    slug: formData.get("slug")?.toString() ?? "",
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid category" };
 
-  if (!name || !slug) return { error: "Name and slug are required" };
-
-  const { error } = await supabase.from("blog_categories").update({ name, slug }).eq("id", id);
-  if (error) return { error: error.message };
-  updateTags("blog_categories");
-  return { success: true };
+  const { error } = await createAdminClient().from("blog_categories").update(parsed.data).eq("id", id);
+  if (error) return error.code === "23505" ? { ok: false, error: "That slug is already used." } : fail("save the category", error);
+  updateTags("blog_categories", "blog_articles");
+  return { ok: true };
 }
 
-export async function deleteBlogCategory(id: string) {
-  await requireAdminRole(["owner", "admin"]);
-  const supabase = createAdminClient();
-
-  const { error } = await supabase.from("blog_categories").delete().eq("id", id);
-  if (error) return { error: error.message };
-  updateTags("blog_categories");
-  return { success: true };
+export async function deleteBlogCategory(id: string): Promise<BlogActionResult> {
+  await requirePermission("content.delete");
+  if (!UUID.test(id)) return { ok: false, error: "Category not found" };
+  const { error } = await createAdminClient().from("blog_categories").delete().eq("id", id);
+  if (error) return fail("delete the category", error);
+  updateTags("blog_categories", "blog_articles");
+  return { ok: true };
 }

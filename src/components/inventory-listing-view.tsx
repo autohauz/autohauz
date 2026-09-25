@@ -115,6 +115,8 @@ export async function InventoryListingView({
             />
           ) : (
             <>
+              {/* The sidebar's "Filter" h2 is hidden on mobile; this keeps h1 → h2 → card h3 in order. */}
+              <h2 className="sr-only">Cars for sale</h2>
               <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-label={`${listing.total} cars`}>
                 {listing.items.map((v, i) => (
                   <li key={v.id} className="flex">

@@ -2,13 +2,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { getBusinessProfile } from "@/lib/data/business";
-import { getInvoiceDetail } from "@/lib/data/invoices";
+import { getInvoiceDetail, getInvoiceableVehicles } from "@/lib/data/invoices";
 import { InvoiceForm } from "../../invoice-form";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Edit Invoice" };
 export const dynamic = "force-dynamic";
 
 export default async function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("invoices.write");
   const { id } = await params;
   const detail = await getInvoiceDetail(id);
   
@@ -21,7 +23,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     redirect(`/admin/invoices/${id}`);
   }
 
-  const profile = await getBusinessProfile();
+  const [profile, vehicles] = await Promise.all([getBusinessProfile(), getInvoiceableVehicles()]);
+  const { gstEnabled, gstRate, pricesIncludeGst, paymentTerms, footerNote } = profile.invoice;
   
   return (
     <div className="space-y-6">
@@ -37,7 +40,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
       </header>
       <InvoiceForm 
         initialData={{ invoice: detail.invoice, items: detail.items }}
-        invoiceSettings={profile.invoice} 
+        invoiceSettings={{ gstEnabled, gstRate, pricesIncludeGst, paymentTerms, footerNote }}
+        vehicles={vehicles} 
       />
     </div>
   );

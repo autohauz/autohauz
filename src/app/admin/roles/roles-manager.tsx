@@ -63,8 +63,8 @@ function AssignRoleForm() {
             <p className="text-xs text-muted-foreground">The user must already have an account on the platform.</p>
           </div>
 
-          <div className="grid gap-3">
-            <Label>Role <span className="text-danger">*</span></Label>
+          <fieldset className="grid gap-3">
+            <legend className="mb-3 text-sm font-medium leading-none">Role <span className="text-danger">*</span></legend>
             <div className="grid gap-2">
               {ROLE_OPTIONS.map((opt) => (
                 <label
@@ -90,7 +90,7 @@ function AssignRoleForm() {
                 </label>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card/70">
             <input
@@ -173,7 +173,7 @@ function RoleRow({ entry }: { entry: AdminRoleEntry }) {
           {entry.fullName && (
             <div className="text-xs text-muted-foreground truncate">{entry.email}</div>
           )}
-          <div className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wider">
+          <div className="text-xs text-muted-foreground mt-0.5">
             Granted {new Date(entry.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
           </div>
         </div>

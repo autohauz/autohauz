@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UploadCloud, X, Loader2, CheckCircle2 } from "lucide-react";
+import { UploadCloud, X, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // Compress standard matches image-upload.tsx
@@ -90,8 +90,7 @@ export function BlogImageUpload({
 
     try {
       const { blob } = await compressToWebP(file);
-      const rand = Math.random().toString(36).substring(2, 15);
-      const filePath = `blog/\${rand}_\${Date.now()}.webp`;
+      const filePath = `blog/${crypto.randomUUID()}.webp`;
 
       const { data, error: uploadError } = await supabase.storage
         .from("media")
@@ -105,7 +104,7 @@ export function BlogImageUpload({
 
       setUrl(publicUrlData.publicUrl);
     } catch (err: unknown) {
-      setError(err.message || "Failed to upload image");
+      setError(err instanceof Error && err.message ? err.message : "Failed to upload image");
     } finally {
       setUploading(false);
       e.target.value = "";

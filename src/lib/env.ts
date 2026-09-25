@@ -49,6 +49,8 @@ export const env = createEnv({
     EMAIL_FROM: z.string().optional(),
     REPLY_TO_EMAIL: z.string().optional(),
     CONTACT_EMAIL_TO: z.string().optional(),
+    // Signs unsubscribe / subscription-confirmation links (HMAC-SHA256).
+    EMAIL_TOKEN_SECRET: z.string().min(32).optional(),
 
     // ── Search ──
 
@@ -96,6 +98,7 @@ export const env = createEnv({
     EMAIL_FROM: process.env.EMAIL_FROM,
     REPLY_TO_EMAIL: process.env.REPLY_TO_EMAIL,
     CONTACT_EMAIL_TO: process.env.CONTACT_EMAIL_TO,
+    EMAIL_TOKEN_SECRET: process.env.EMAIL_TOKEN_SECRET,
     SYNDICATION_LIVE_PUSH: process.env.SYNDICATION_LIVE_PUSH,
     FEED_MAX_DROP_PCT: process.env.FEED_MAX_DROP_PCT,
     FEED_STORAGE_BUCKET: process.env.FEED_STORAGE_BUCKET,

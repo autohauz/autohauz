@@ -6,6 +6,7 @@ import { ButtonLink, buttonVariants } from "@/components/ui/button";
 import { VehicleEnquiryForm } from "@/components/leads/vehicle-enquiry-form";
 import { InspectionForm } from "@/components/leads/inspection-form";
 import { cn } from "@/lib/utils";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 function track(vehicleId: string, channel: "call" | "whatsapp" | "enquire") {
   // Fire-and-forget; never blocks the click.
@@ -40,7 +41,7 @@ type Props = {
  */
 export function VdpLeadActions({ vehicleId, vehicleTitle, phone, whatsappUrl, showInspection = true, showFinance = true, showTradeIn = true, variant = "card" }: Props) {
   const sticky = variant === "sticky";
-  const tel = phone ? `tel:${phone.replace(/\s+/g, "")}` : null;
+  const tel = phone ? telHref(phone) : null;
 
   const enquire = (
     <Dialog>
@@ -90,7 +91,7 @@ export function VdpLeadActions({ vehicleId, vehicleTitle, phone, whatsappUrl, sh
       {enquire}
       {tel ? (
         <a href={tel} onClick={() => track(vehicleId, "call")} className={cn(buttonVariants({ size: "cta" }), "w-full")}>
-          <Phone aria-hidden="true" /> Call {phone}
+          <Phone aria-hidden="true" /> Call {formatPhoneForDisplay(phone ?? "")}
         </a>
       ) : null}
       {whatsappUrl ? (

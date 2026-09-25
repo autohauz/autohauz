@@ -58,7 +58,7 @@ export function InvoicesTable({ data, activeStatus }: InvoicesTableProps) {
         const isOverdue = row.isOverdue as boolean;
         const statusKey = isOverdue ? "overdue" : (val as InvoiceStatus);
         return (
-          <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold ${INVOICE_STATUS_STYLES[statusKey] ?? ""}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${INVOICE_STATUS_STYLES[statusKey] ?? ""}`}>
             {INVOICE_STATUS_LABELS[statusKey]}
           </span>
         );

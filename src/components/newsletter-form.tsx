@@ -12,7 +12,8 @@ async function subscribe(_prev: State, formData: FormData): Promise<State> {
     const res = await fetch("/api/v1/newsletter", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, consent: true, source: "footer" }),
+      // `website` is a honeypot: humans never see or fill it.
+      body: JSON.stringify({ email, consent: true, source: "footer", website: String(formData.get("website") ?? "") }),
     });
     if (!res.ok) {
       const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -33,7 +34,7 @@ export function NewsletterForm() {
     return (
       <p role="status" className="inline-flex items-center gap-2 rounded-md border border-border bg-success-soft px-4 py-3 text-sm font-medium text-success">
         <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
-        You&apos;re on the list. We&apos;ll email you when new cars arrive.
+        Almost there: check your inbox and click the link to confirm your subscription.
       </p>
     );
   }
@@ -42,6 +43,10 @@ export function NewsletterForm() {
 
   return (
     <form action={action} className="flex w-full flex-col gap-3 sm:flex-row" noValidate>
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor={`${id}-website`}>Leave this field empty</label>
+        <input id={`${id}-website`} type="text" name="website" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="flex-1">
         <label htmlFor={`${id}-email`} className="sr-only">Email address</label>
         <input

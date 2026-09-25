@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { safeAdminRedirect } from "@/lib/routing";
 import { BrandLogo } from "@/components/brand-logo";
 import { site } from "@/config/site";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,9 @@ import { Field } from "@/components/ui/field";
 /** Staff-only sign-in (there are no buyer accounts). Email + password. */
 export function StaffSignIn() {
   const params = useSearchParams();
-  const redirectedFrom = params.get("redirectedFrom");
+  // Validated once: this value ends up in window.location and the OAuth
+  // callback URL, so an unchecked `javascript:` or `//host` is XSS/open redirect.
+  const redirectTo = safeAdminRedirect(params.get("redirectedFrom"));
   const urlError = params.get("error");
   
   const [email, setEmail] = useState("");
@@ -40,7 +43,7 @@ export function StaffSignIn() {
         return;
       }
       // Full navigation so the server picks up the new session cookies.
-      window.location.href = redirectedFrom || "/admin";
+      window.location.href = redirectTo;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please try again.");
       setLoading(false);
@@ -51,7 +54,8 @@ export function StaffSignIn() {
     <div className="w-full max-w-sm">
       <div className="mb-6 text-center">
         <div className="mx-auto mb-4 flex justify-center">
-          <BrandLogo height={48} priority />
+          {/* The page is a dark surface: use the logo drawn for dark backgrounds. */}
+          <BrandLogo variant="dark" height={48} priority />
         </div>
         <h1 className="font-heading text-2xl font-bold text-foreground">Staff sign in</h1>
         <p className="mt-1 text-sm text-muted-foreground">{site.brandName} admin panel</p>
@@ -80,7 +84,11 @@ export function StaffSignIn() {
             />
           )}
         </Field>
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? <Loader2 className="size-5 animate-spin" /> : null}
           Sign in
@@ -102,7 +110,7 @@ export function StaffSignIn() {
         onClick={async () => {
           setLoading(true);
           const supabase = createClient();
-          const next = redirectedFrom || "/admin";
+          const next = redirectTo;
           try {
             const { error } = await supabase.auth.signInWithOAuth({
               provider: "google",

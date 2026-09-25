@@ -3,6 +3,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 
+/** Constant-time string comparison (length is not secret here). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
+
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const mode = searchParams.get("hub.mode");
@@ -16,7 +23,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Webhook verify token not configured" }, { status: 503 });
   }
 
-  if (mode === "subscribe" && token === verifyToken) {
+  if (mode === "subscribe" && token && safeEqual(token, verifyToken)) {
     return new NextResponse(challenge, { status: 200 });
   } else {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

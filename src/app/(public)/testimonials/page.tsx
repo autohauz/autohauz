@@ -13,11 +13,17 @@ import { pageMetadata } from "@/lib/seo/metadata";
 import type { TestimonialSource } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = pageMetadata({
-  path: "/testimonials",
-  title: "Customer Reviews",
-  description: "What people say about buying a car with us — honest inspections, fair pricing and straight answers.",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const testimonials = await getApprovedTestimonials(1);
+  return pageMetadata({
+    path: "/testimonials",
+    title: "Customer reviews",
+    description: "What customers say about buying a car with us, in their own words.",
+    // An empty review page is thin content: keep it out of the index until
+    // there are genuine reviews to show.
+    noindex: testimonials.length === 0,
+  });
+}
 
 export const revalidate = 3600;
 

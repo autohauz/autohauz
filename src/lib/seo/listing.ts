@@ -29,7 +29,7 @@ type SP = Record<string, string | string[] | undefined>;
 /** Query keys the listing UI uses as facets. `page` is deliberately excluded. */
 const FACET_KEYS = [
   "make", "model", "body", "fuel", "transmission", "drive", "seats",
-  "price_min", "price_max", "year_min", "year_max", "km_max", "city", "q", "sort",
+  "price_min", "price_max", "year_min", "year_max", "km_max", "city", "q", "sort", "status",
 ] as const;
 
 function firstValue(sp: SP, key: string): string | undefined {
@@ -92,7 +92,6 @@ export function listingMetadata(input: {
   sp: SP;
   title: string;
   description: string;
-  keywords?: string[];
   /**
    * Live stock count for this landing page. When supplied, a page that is too
    * thin to be useful is held out of the index until inventory grows into it.
@@ -108,7 +107,6 @@ export function listingMetadata(input: {
       path: input.basePath,
       title,
       description: input.description,
-      keywords: input.keywords,
     }),
     ...indexation,
     // A thin page is noindex regardless of facets; the facet rule can only

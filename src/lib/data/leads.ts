@@ -1,7 +1,10 @@
+import "server-only";
+import { requirePermission } from "@/lib/security/auth";
 /* eslint-disable @typescript-eslint/no-explicit-any --
    Untyped Supabase client: lead rows surface as `any` and are shaped into typed
    domain projections before leaving this module. */
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeSearchTerm } from "@/lib/data/search";
 import type { Lead, LeadEvent, LeadStatus, LeadType } from "@/lib/domain";
 
 /**
@@ -45,6 +48,7 @@ export async function getLeadList(filters?: {
   assigneeId?: string;
   q?: string;
 }): Promise<Lead[]> {
+  await requirePermission("leads.view");
   const supabase = createAdminClient();
   let q = supabase
     .from("leads")
@@ -55,12 +59,14 @@ export async function getLeadList(filters?: {
   if (filters?.status) q = q.eq("status", filters.status);
   if (filters?.type) q = q.eq("type", filters.type);
   if (filters?.assigneeId) q = q.eq("assignee_id", filters.assigneeId);
-  if (filters?.q) q = q.or(`name.ilike.%${filters.q}%,phone.ilike.%${filters.q}%`);
+  const term = sanitizeSearchTerm(filters?.q);
+  if (term) q = q.or(`name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
   const { data } = await q;
   return ((data ?? []) as RawRow[]).map(toLead);
 }
 
 export async function getSpamLeads(): Promise<Lead[]> {
+  await requirePermission("leads.view");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("leads")
@@ -74,6 +80,7 @@ export async function getSpamLeads(): Promise<Lead[]> {
 export async function getLeadDetail(
   id: string,
 ): Promise<{ lead: Lead; events: LeadEvent[] } | null> {
+  await requirePermission("leads.view");
   const supabase = createAdminClient();
   const { data: leadRow } = await supabase.from("leads").select(LEAD_SELECT).eq("id", id).maybeSingle();
   if (!leadRow) return null;

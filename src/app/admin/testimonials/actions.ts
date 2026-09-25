@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { updateTags } from "@/lib/cache";
-import { requireAdmin } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { testimonialSchema } from "@/lib/validation/content";
 
@@ -14,7 +14,7 @@ function refresh() {
 }
 
 export async function saveTestimonial(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("content.write");
   const raw = Object.fromEntries(formData.entries());
   const parsed = testimonialSchema.safeParse({ ...raw, isApproved: raw.isApproved === "on" });
   if (!parsed.success) return { error: parsed.error.issues.map((i) => i.message).join("; ") };
@@ -39,7 +39,7 @@ export async function saveTestimonial(_prev: unknown, formData: FormData) {
 }
 
 export async function toggleTestimonialApproved(id: string, approved: boolean) {
-  await requireAdmin();
+  await requirePermission("content.write");
   const supabase = createAdminClient();
   await supabase.from("testimonials").update({ is_approved: approved }).eq("id", id);
   refresh();
@@ -47,7 +47,7 @@ export async function toggleTestimonialApproved(id: string, approved: boolean) {
 }
 
 export async function deleteTestimonial(id: string) {
-  await requireAdmin();
+  await requirePermission("content.delete");
   const supabase = createAdminClient();
   await supabase.from("testimonials").delete().eq("id", id);
   refresh();

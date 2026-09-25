@@ -15,10 +15,22 @@ const MEDIA_BUCKET = "media";
  */
 export const VEHICLE_PLACEHOLDER = "/brand/vehicle-placeholder.svg";
 
-/** Direct public URL for a media_assets.storage_key in the `media` bucket. */
+/**
+ * Direct public URL for a media_assets.storage_key in the `media` bucket.
+ *
+ * Only objects in our own storage are real photos of our cars. A key that is
+ * an external URL (legacy seed rows pointed at stock-photo sites) renders the
+ * neutral placeholder instead: a stock photo on a listing misrepresents the
+ * car, and the CSP blocks third-party images anyway.
+ */
 export function buildMediaUrl(supabaseUrl: string, storageKey: string): string {
-  if (storageKey.startsWith("http://") || storageKey.startsWith("https://")) {
-    return storageKey;
+  if (/^https?:\/\//i.test(storageKey)) {
+    try {
+      const own = new URL(supabaseUrl).origin;
+      return new URL(storageKey).origin === own ? storageKey : VEHICLE_PLACEHOLDER;
+    } catch {
+      return VEHICLE_PLACEHOLDER;
+    }
   }
   const baseUrl = supabaseUrl.replace(/\/$/, "");
   const encodedKey = storageKey.split('/').map(encodeURIComponent).join('/');

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ListingPage } from "@/components/listing/listing-page";
 import { getMakes, getVehicleCount } from "@/lib/data/inventory";
-import { formatPrice } from "@/lib/nav";
+import { BUDGET_BANDS, formatPrice } from "@/lib/nav";
 import { listingMetadata } from "@/lib/seo/listing";
 import { makeTitle, makeDescription, budgetTitle, budgetDescription } from "@/lib/seo/templates";
 
@@ -13,9 +13,12 @@ type SP = Record<string, string | string[] | undefined>;
 
 // The [make] segment doubles as the budget landing (`under-{price}`), since both
 // are single dynamic segments under /used-cars and can't be separate routes.
+// Only the budget bands the site links to exist; any other number is a 404,
+// not an infinite set of near-duplicate indexable pages.
+const BUDGETS = new Set(BUDGET_BANDS.map((b) => b.max));
 function parseBudget(seg: string): number | null {
   const m = /^under-(\d{3,7})$/.exec(seg);
-  return m ? Number(m[1]) : null;
+  return m && BUDGETS.has(Number(m[1])) ? Number(m[1]) : null;
 }
 
 async function resolveMake(slug: string) {
@@ -46,7 +49,6 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
     sp,
     title: makeTitle(m.name),
     description: makeDescription(m.name),
-    keywords: [`used ${m.name} for sale`, `second hand ${m.name}`, `${m.name} dealer`],
     thin: { total: await getVehicleCount({ make: m.slug }), kind: "makeModel" },
   });
 }

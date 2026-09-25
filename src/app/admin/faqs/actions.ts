@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { updateTags } from "@/lib/cache";
-import { requireAdmin } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { faqSchema } from "@/lib/validation/content";
 
@@ -13,7 +13,7 @@ function refresh() {
 }
 
 export async function saveFaq(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("content.write");
   const raw = Object.fromEntries(formData.entries());
   const parsed = faqSchema.safeParse({ ...raw, isPublished: raw.isPublished === "on" });
   if (!parsed.success) return { error: parsed.error.issues.map((i) => i.message).join("; ") };
@@ -29,7 +29,7 @@ export async function saveFaq(_prev: unknown, formData: FormData) {
 }
 
 export async function deleteFaq(id: string) {
-  await requireAdmin();
+  await requirePermission("content.delete");
   const supabase = createAdminClient();
   await supabase.from("faqs").delete().eq("id", id);
   refresh();

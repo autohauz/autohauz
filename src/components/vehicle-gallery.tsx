@@ -10,6 +10,7 @@ import { usePinchZoom } from "@/hooks/use-pinch-zoom";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { VEHICLE_PLACEHOLDER } from "@/lib/media";
 
 /**
  * Vehicle photo gallery — DESIGN.md §7.
@@ -26,6 +27,9 @@ export function VehicleGallery({ images, title, sold = false }: { images: Vehicl
   const stageRef = useRef<HTMLDivElement>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const count = images.length;
+  // Only the "photo coming soon" artwork: nothing worth enlarging, and its
+  // caption would sit under the lightbox button.
+  const placeholderOnly = images.every((img) => img.url === VEHICLE_PLACEHOLDER);
 
   const go = useCallback((delta: number) => setIndex((i) => (count ? (i + delta + count) % count : 0)), [count]);
   useSwipeGesture(stageRef, { onSwipeLeft: () => go(1), onSwipeRight: () => go(-1) });
@@ -46,7 +50,7 @@ export function VehicleGallery({ images, title, sold = false }: { images: Vehicl
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       go(-1);
-    } else if (e.key === "Enter") {
+    } else if (e.key === "Enter" && !placeholderOnly) {
       setOpen(true);
     }
   };
@@ -68,7 +72,8 @@ export function VehicleGallery({ images, title, sold = false }: { images: Vehicl
           fill
           sizes="(max-width: 1024px) 100vw, 60vw"
           className={cn("object-contain select-none", sold && "opacity-80 grayscale-[40%]")}
-          priority={index === 0}
+          preload={index === 0}
+          fetchPriority={index === 0 ? "high" : undefined}
           draggable={false}
         />
         {sold ? (
@@ -104,22 +109,24 @@ export function VehicleGallery({ images, title, sold = false }: { images: Vehicl
           </>
         ) : null}
 
-        <div className="absolute inset-x-4 bottom-4 flex items-end justify-between">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/60 opacity-0 group-hover:opacity-100"
-          >
-            <Images className="size-4" aria-hidden="true" />
-            {count === 1 ? "View photo" : `${count} photos`}
-            <Expand className="ml-0.5 size-3.5 opacity-70" aria-hidden="true" />
-          </button>
-          {count > 1 ? (
-            <span className="tabular text-[13px] font-bold text-white tracking-widest" aria-hidden="true">
-              {index + 1} / {count}
-            </span>
-          ) : null}
-        </div>
+        {placeholderOnly ? null : (
+          <div className="absolute inset-x-4 bottom-4 flex items-end justify-between">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/60 opacity-0 group-hover:opacity-100"
+            >
+              <Images className="size-4" aria-hidden="true" />
+              {count === 1 ? "View photo" : `${count} photos`}
+              <Expand className="ml-0.5 size-3.5 opacity-70" aria-hidden="true" />
+            </button>
+            {count > 1 ? (
+              <span className="tabular text-[13px] font-bold text-white tracking-widest" aria-hidden="true">
+                {index + 1} / {count}
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {count > 1 ? (

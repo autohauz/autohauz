@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { isSafeRedirectPath } from "@/lib/routing";
+import { safeAdminRedirect } from "@/lib/routing";
 import { sendWelcomeEmail } from "@/lib/email/ses";
 import { deriveProfileFromUser } from "@/lib/auth/profile";
+import { isStaffRole } from "@/lib/security/permissions";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
   const rawNext = requestUrl.searchParams.get("next");
 
   // Only staff authenticate; send them to their intended admin page or the panel.
-  const destination = rawNext && isSafeRedirectPath(rawNext) ? rawNext : "/admin";
+  const destination = safeAdminRedirect(rawNext);
 
   const supabase = await createClient();
 
@@ -31,39 +32,25 @@ export async function GET(request: NextRequest) {
     if (data.user) {
       const admin = createAdminClient();
 
-      // Upsert profile and send welcome email for brand-new users
-      const { data: existingProfile } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      const isNewUser = !existingProfile;
       await admin.from("profiles").upsert(deriveProfileFromUser(data.user));
-
-      if (isNewUser && data.user.email) {
-        const name =
-          data.user.user_metadata?.full_name ??
-          data.user.user_metadata?.name ??
-          data.user.email.split("@")[0];
-        sendWelcomeEmail({ to: data.user.email, name }).catch((err) =>
-          console.error("[Auth Callback] Welcome email failed:", err),
-        );
-      }
 
       // ── Pending role auto-apply ────────────────────────────────────────────
       // If an admin pre-assigned a role for this email before the user had an
-      // account, apply it now and remove the pending entry.
+      // account, apply it now and remove the pending entry. The address is
+      // verified: this callback only runs after an OAuth provider (or an
+      // emailed confirmation link) proved ownership of it.
       if (data.user.email) {
         const email = data.user.email.toLowerCase();
         const { data: pending } = await admin
           .from("pending_admin_roles")
           .select("id, role, mfa_required")
-          .ilike("email", email)
+          // Exact match: emails are stored lower-cased, and `ilike` would treat
+          // `_`/`%` in an address as wildcards.
+          .eq("email", email)
           .maybeSingle();
 
-        if (pending) {
-          await admin.from("admin_roles").upsert(
+        if (pending && isStaffRole(pending.role)) {
+          const { error: grantError } = await admin.from("admin_roles").upsert(
             {
               user_id: data.user.id,
               role: pending.role,
@@ -72,11 +59,24 @@ export async function GET(request: NextRequest) {
             },
             { onConflict: "user_id" },
           );
-          // Clean up the pending entry
-          await admin.from("pending_admin_roles").delete().eq("id", pending.id);
-          console.log(
-            `[Auth Callback] Applied pending role "${pending.role}" to ${email}`,
-          );
+          if (grantError) {
+            console.error("[auth/callback] pending role grant failed:", grantError.message);
+          } else {
+            await admin.from("pending_admin_roles").delete().eq("id", pending.id);
+            await admin.from("activity_logs").insert({
+              user_id: data.user.id,
+              action: "admin_role_pending_applied",
+              entity_type: "admin_role",
+              entity_id: data.user.id,
+              diff: { role: pending.role },
+            });
+            // Welcome only people who actually became staff. Anyone can sign
+            // in with Google; a non-staff account gets no email and no access.
+            const name = data.user.user_metadata?.full_name ?? data.user.user_metadata?.name ?? email.split("@")[0];
+            sendWelcomeEmail({ to: email, name }).catch((err) =>
+              console.error("[auth/callback] welcome email failed:", err instanceof Error ? err.message : err),
+            );
+          }
         }
       }
       // ── End pending role ───────────────────────────────────────────────────

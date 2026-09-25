@@ -1,24 +1,34 @@
 import { notFound } from "next/navigation";
-import { getBlogArticleBySlug, getBlogArticles } from "@/lib/data/blog";
+import { getBlogArticleBySlug, getBlogArticles, isPubliclyVisible } from "@/lib/data/blog";
 import { Container } from "@/components/ui/container";
 import { ArticleBody } from "@/components/blog/article-body";
-import { ArticleCard } from "@/components/blog/article-card";
 import { pageMetadata } from "@/lib/seo/metadata";
-import { articleJsonLd } from "@/lib/seo/blog";
+import { articleCanonicalPath, articleJsonLd } from "@/lib/seo/blog";
+import { JsonLd } from "@/components/json-ld";
 import Link from "next/link";
 import { format } from "date-fns";
 import { site } from "@/config/site";
+
+export const revalidate = 300;
+
+// No pages are pre-built; each one is rendered on its first request and then
+// served from cache until `revalidate` (on-demand ISR). Without this, a
+// dynamic segment is rendered on every request and `revalidate` is ignored.
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }) {
   const params = await props.params;
   const article = await getBlogArticleBySlug(params.slug);
   
-  if (!article || article.status !== "published") return {};
+  if (!article || !isPubliclyVisible(article)) return {};
 
   return pageMetadata({
-    path: article.canonicalUrl || `/blog/\${article.slug}`,
-    title: article.metaTitle || `\${article.title} | \${site.brandName}`,
-    description: article.metaDescription || article.excerpt || `Read \${article.title} on the \${site.brandName} blog.`,
+    path: articleCanonicalPath(article),
+    // The root layout's title template appends the brand.
+    title: article.metaTitle || article.title,
+    description: article.metaDescription || article.excerpt || `Read ${article.title} on the ${site.brandName} blog.`,
     image: article.socialImageUrl || article.featuredImageUrl,
   });
 }
@@ -27,7 +37,7 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
   const params = await props.params;
   const article = await getBlogArticleBySlug(params.slug);
   
-  if (!article || article.status !== "published") {
+  if (!article || !isPubliclyVisible(article)) {
     notFound();
   }
 
@@ -42,19 +52,14 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
 
   return (
     <>
-      {/* Inject JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd(article)) }}
-      />
+      <JsonLd schema={articleJsonLd(article)} />
       
-      <main className="py-12 md:py-20 bg-background min-h-screen">
         <Container>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8">
             
             <div className="lg:col-span-8">
               {/* Breadcrumbs */}
-              <nav className="flex text-sm text-muted-foreground mb-8">
+              <nav aria-label="Breadcrumb" className="mb-8 flex text-sm text-muted-foreground">
                 <ol className="flex items-center space-x-2">
                   <li><Link href="/" className="hover:text-foreground transition-colors">Home</Link></li>
                   <li><span className="mx-2">/</span></li>
@@ -63,7 +68,7 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
                     <>
                       <li><span className="mx-2">/</span></li>
                       <li>
-                        <Link href={`/blog/category/\${article.category.slug}`} className="hover:text-foreground transition-colors">
+                        <Link href={`/blog/category/${article.category.slug}`} className="hover:text-foreground transition-colors">
                           {article.category.name}
                         </Link>
                       </li>
@@ -89,7 +94,7 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
                   )}
                   {article.authorName && <span>•</span>}
                   <time dateTime={article.publishedAt!}>
-                    {format(new Date(article.publishedAt!), "MMMM d, yyyy")}
+                    {format(new Date(article.publishedAt!), "d MMMM yyyy")}
                   </time>
                   <span>•</span>
                   <span>{article.readingTimeMinutes} min read</span>
@@ -113,7 +118,7 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
                 
                 {article.tags && article.tags.length > 0 && (
                   <div className="mt-10 pt-6 border-t border-border">
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Tags:</h3>
+                    <h2 className="mb-3 text-sm font-semibold text-foreground">Tags</h2>
                     <div className="flex flex-wrap gap-2">
                       {article.tags.map(tag => (
                         <span key={tag.id} className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
@@ -130,28 +135,28 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
             <aside className="lg:col-span-4 space-y-8">
               {relatedArticles.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl p-6 sticky top-24">
-                  <h3 className="font-heading font-bold text-xl text-foreground mb-6 pb-4 border-b border-border">
-                    Related Articles
-                  </h3>
+                  <h2 className="mb-6 border-b border-border pb-4 font-heading text-xl font-bold text-foreground">
+                    Related articles
+                  </h2>
                   <div className="space-y-6">
                     {relatedArticles.map(rel => (
                       <article key={rel.id} className="group">
-                        <Link href={`/blog/\${rel.slug}`} className="block">
+                        <Link href={`/blog/${rel.slug}`} className="block">
                           {rel.featuredImageUrl && (
                             <div className="aspect-video rounded-xl overflow-hidden bg-muted mb-3 border border-border">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img 
                                 src={rel.featuredImageUrl} 
                                 alt="" 
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                className="h-full w-full object-cover" 
                               />
                             </div>
                           )}
-                          <h4 className="font-heading font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                          <h3 className="line-clamp-2 font-heading font-bold text-foreground transition-colors group-hover:text-primary">
                             {rel.title}
-                          </h4>
+                          </h3>
                           <div className="text-xs text-muted-foreground mt-2">
-                            {format(new Date(rel.publishedAt!), "MMM d, yyyy")}
+                            {format(new Date(rel.publishedAt!), "d MMM yyyy")}
                           </div>
                         </Link>
                       </article>
@@ -162,7 +167,6 @@ export default async function ArticlePage(props: { params: Promise<{ slug: strin
             </aside>
           </div>
         </Container>
-      </main>
     </>
   );
 }

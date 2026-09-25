@@ -108,14 +108,6 @@ export function websiteSchema() {
     description: seo.defaultDescription,
     publisher: { "@id": ORGANIZATION_ID },
     inLanguage: site.locale,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${base}${seo.searchPath}?${seo.searchParam}={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
-    },
   };
 }
 
@@ -185,38 +177,20 @@ export function faqPageSchema(faqs: Pick<Faq, "question" | "answer">[]) {
  * conditional on real data: partial markup outranks invented markup, and a
  * fabricated value is a manual-action risk.
  *
- * Notable additions over the original minimal version:
  *  • `@id` + `mainEntityOfPage` anchor the vehicle to its canonical URL.
- *  • ALL gallery images (Google prefers multiple; single-image markup is
- *    ineligible for some image treatments) instead of just the cover.
- *  • `sku`/`vehicleIdentificationNumber` — the dealer's stock ID and masked VIN
- *    are the entity keys that let Google dedupe this car across aggregators.
- *  • `priceValidUntil`, without which Google reports "missing field price".
+ *  • All gallery images, not just the cover.
+ *  • `sku` is the dealer's stock number. The VIN is deliberately NOT emitted:
+ *    the site only holds a masked VIN, and a masked value published as
+ *    `vehicleIdentificationNumber` would be false data.
+ *  • No `priceValidUntil` or `productionDate`: the site has no real value for
+ *    either, and an invented one is worse than an absent one.
  *  • `driveWheelConfiguration`, `numberOfDoors`, `vehicleEngine`, `vehicleConfiguration`.
  *  • The Offer's `seller` and `availableAtOrFrom` reference the site-wide
  *    AutoDealer node by `@id`, so the dealership's Google review aggregate
  *    (which is what surfaces stars beside a vehicle result) resolves from one
  *    entity rather than a detached copy per vehicle.
  */
-export function vehicleSchema(
-  v: VehicleDetail,
-  opts: {
-    path: string;
-    /**
-     * How long the advertised price stands (YYYY-MM-DD). Defaults to 30 days
-     * out, which matches how often stock is repriced here. Google reports
-     * "missing field priceValidUntil" without it and suppresses the price from
-     * the rich result. Injectable so tests can pin the date; the default is
-     * computed here rather than by the caller because reading the clock inside
-     * a Server Component's render violates React's purity rule.
-     */
-    priceValidUntil?: string;
-  },
-) {
-  const priceValidUntil =
-    opts.priceValidUntil ??
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
+export function vehicleSchema(v: VehicleDetail, opts: { path: string }) {
   const url = absoluteUrl(opts.path);
   const availability =
     v.status === "sold" ? "https://schema.org/SoldOut"
@@ -228,7 +202,8 @@ export function vehicleSchema(
 
   return {
     "@context": CONTEXT,
-    "@type": "Vehicle",
+    // `Car` is the type Google's vehicle listing results read.
+    "@type": "Car",
     "@id": `${url}#vehicle`,
     name,
     ...(v.description ? { description: v.description } : {}),
@@ -238,13 +213,11 @@ export function vehicleSchema(
     model: v.modelName,
     ...(v.variant ? { vehicleConfiguration: v.variant } : {}),
     vehicleModelDate: String(v.year),
-    productionDate: String(v.year),
     bodyType: BODY_TYPE_LABELS[v.bodyType],
     fuelType: FUEL_LABELS[v.fuelType],
     vehicleTransmission: TRANSMISSION_LABELS[v.transmission],
     itemCondition: "https://schema.org/UsedCondition",
-    ...(v.stockId ? { sku: v.stockId, mpn: v.stockId } : {}),
-    ...(v.vinMasked ? { vehicleIdentificationNumber: v.vinMasked } : {}),
+    ...(v.stockId ? { sku: v.stockId } : {}),
     ...(v.exteriorColor ? { color: v.exteriorColor } : {}),
     ...(v.interior ? { vehicleInteriorColor: v.interior } : {}),
     ...(v.seats ? { seatingCapacity: v.seats } : {}),
@@ -277,7 +250,6 @@ export function vehicleSchema(
       "@id": `${url}#offer`,
       price: v.price,
       priceCurrency: "AUD",
-      priceValidUntil,
       availability,
       itemCondition: "https://schema.org/UsedCondition",
       url,

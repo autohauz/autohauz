@@ -60,25 +60,13 @@ export const getBusinessProfile = unstable_cache(
       },
     };
 
-    const cleanPhone = (val: unknown, fallback: string) => {
-      const s = str(val);
-      if (!s || /365|car\s*365/i.test(s)) return fallback;
-      return s;
-    };
-
-    const cleanEmail = (val: unknown, fallback: string) => {
-      const s = str(val);
-      if (!s || /car365|cars365/i.test(s)) return fallback;
-      return s;
-    };
-
     return {
       legalName: str(company.legal_name, d.legalName) || d.legalName,
       tradingName: str(company.trading_name, d.tradingName) || d.tradingName,
       abn: str(company.abn),
-      email: cleanEmail(company.email, d.email),
-      phone: cleanPhone(phones.primary, d.phone),
-      whatsapp: cleanPhone(phones.whatsapp, d.whatsapp),
+      email: str(company.email, d.email) || d.email,
+      phone: str(phones.primary) || d.phone,
+      whatsapp: str(phones.whatsapp) || d.whatsapp,
       address: {
         street: str(address.street, d.address.street) || d.address.street,
         suburb: str(address.suburb, d.address.suburb) || d.address.suburb,

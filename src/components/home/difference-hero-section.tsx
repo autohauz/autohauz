@@ -1,11 +1,8 @@
-"use client";
-
-import Image from "next/image";
-import { motion } from "framer-motion";
 import { 
-  ShieldCheck, Wrench, CheckCircle2, HeartHandshake, Sparkles, ArrowRight 
+  ShieldCheck, Wrench, CheckCircle2, HeartHandshake, ArrowRight 
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
+import { ResponsiveImage } from "@/components/responsive-image";
 
 const DIFFERENCE_FEATURES = [
   { icon: ShieldCheck, title: "Carefully Sourced Vehicles", desc: "Quality you can rely on" },
@@ -18,29 +15,18 @@ export function DifferenceHeroSection() {
   return (
     <section className="py-12 bg-background" aria-labelledby="difference-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <div
           className="relative overflow-hidden rounded-3xl bg-[#040f24] text-white p-8 sm:p-12 lg:p-16 border border-white/10 shadow-2xl"
         >
           <div className="absolute inset-0 z-0">
-            <Image
-              src="/images/heroes/homepage-hero.jpg"
-              alt="The AutoHauz Difference"
-              fill
-              className="object-cover object-center opacity-25"
-              sizes="100vw"
-            />
+            <ResponsiveImage src="/images/heroes/homepage-hero.jpg" alt="" fill className="object-cover object-center opacity-25" sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#040f24] via-[#040f24]/95 to-transparent" />
           </div>
 
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Left Column Text */}
             <div className="lg:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-accent-bright uppercase">
-                <Sparkles className="size-4" />
+              <div className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-[var(--azure-300)] uppercase">
                 <span>ABOUT AUTOHAUZ</span>
               </div>
               <h2 id="difference-heading" className="text-3xl sm:text-4xl lg:text-5xl font-black font-heading tracking-tight text-white">
@@ -57,11 +43,7 @@ export function DifferenceHeroSection() {
             </div>
 
             {/* Right Column Glassmorphic Features */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+            <div
               className="lg:col-span-5 bg-[#0a1936]/80 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 space-y-6"
             >
               {DIFFERENCE_FEATURES.map((item) => (
@@ -75,9 +57,9 @@ export function DifferenceHeroSection() {
                   </div>
                 </div>
               ))}
-            </motion.div>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

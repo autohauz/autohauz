@@ -45,6 +45,17 @@ export const ALLOWED_BOTS = [
   "pinterestbot",
   "tumblr",
   "telegrambot",
+  // Google's own tools (Search Console URL Inspection, Rich Results Test, Ads, Merchant)
+  "google-inspectiontool",
+  "adsbot-google",
+  "storebot-google",
+  "googleother",
+  // AI *search* / answer crawlers (training crawlers stay blocked in robots.txt)
+  "oai-searchbot",
+  "chatgpt-user",
+  "perplexitybot",
+  "claude-searchbot",
+  "claude-user",
 ] as const;
 
 /**

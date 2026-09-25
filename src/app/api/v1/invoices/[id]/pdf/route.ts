@@ -1,43 +1,38 @@
-import * as React from "react";
 import { NextRequest, NextResponse } from "next/server";
-import { renderToStream } from "@react-pdf/renderer";
 import { getInvoiceDetail } from "@/lib/data/invoices";
 import { getBusinessProfile } from "@/lib/data/business";
-import { requireApiAdmin } from "@/lib/security/auth";
-import { InvoiceDocument } from "./invoice-document";
+import { requireApiPermission } from "@/lib/security/auth";
+import { renderInvoicePdf } from "@/lib/invoices/pdf";
+
+export const runtime = "nodejs";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const { response } = await requireApiAdmin();
+  const { response } = await requireApiPermission("invoices.view");
   if (response) return response;
 
   const { id } = await props.params;
+  if (!UUID.test(id)) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
   try {
     const detail = await getInvoiceDetail(id);
-    if (!detail) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
-    }
-    const profile = await getBusinessProfile();
+    if (!detail) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
-    // Create the PDF stream using react-pdf/renderer
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const stream = await renderToStream(
-      React.createElement(InvoiceDocument, {
-        invoice: detail.invoice,
-        items: detail.items,
-        profile,
-      }) as React.ReactElement<unknown>
-    );
+    const pdf = await renderInvoicePdf(detail, await getBusinessProfile());
+    const number = (detail.invoice.invoiceNumber ?? "draft").replace(/[^A-Za-z0-9-]/g, "");
+    const disposition = req.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";
 
-    // Provide the stream to the response
-    return new NextResponse(stream as unknown as BodyInit, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="invoice-${detail.invoice.invoiceNumber || "draft"}.pdf"`,
+        "Content-Disposition": `${disposition}; filename="invoice-${number}.pdf"`,
+        // Contains customer PII and bank details: never cache.
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {
-    console.error("PDF generation failed:", error);
+    console.error("[invoices] PDF generation failed:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
   }
 }

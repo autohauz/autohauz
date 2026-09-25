@@ -55,6 +55,7 @@ export const bodyTypeHref = (b: BodyType) => `/used-cars/body/${b.replace("_", "
 export const budgetHref = (max: number) => `/used-cars/under-${max}`;
 export const makeHref = (slug: string) => `/used-cars/${slug}`;
 export const modelHref = (makeSlug: string, modelSlug: string) => `/used-cars/${makeSlug}/${modelSlug}`;
+export const vehicleHref = (makeSlug: string, modelSlug: string, slug: string) => `/used-cars/${makeSlug}/${modelSlug}/${slug}`;
 
 /** Parse a `body-type` URL segment (kebab) back to a BodyType enum value. */
 export function parseBodySegment(seg: string): BodyType | null {

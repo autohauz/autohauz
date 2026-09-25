@@ -25,7 +25,6 @@ export function pageMetadata(input: {
   image?: string | null;
   /** Set for utility pages that should stay out of the index. */
   noindex?: boolean;
-  keywords?: string[];
 }): Metadata {
   const url = absoluteUrl(input.path);
   const image = input.image || seo.ogImage;
@@ -33,7 +32,6 @@ export function pageMetadata(input: {
   return {
     title: input.title,
     description: input.description,
-    ...(input.keywords?.length ? { keywords: input.keywords } : {}),
     alternates: canonical(input.path),
     ...(input.noindex
       ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }

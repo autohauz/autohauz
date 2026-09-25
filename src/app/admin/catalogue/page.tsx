@@ -1,10 +1,12 @@
 import { getMakes, getAllModels } from "@/lib/data/inventory";
 import { AddMakeForm, MakeRow } from "./catalogue-client";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Brands & Models" };
 export const dynamic = "force-dynamic";
 
 export default async function CataloguePage() {
+  await requirePermission("catalogue.write");
   const [makes, models] = await Promise.all([getMakes(), getAllModels()]);
   const popular = makes.filter((m) => m.isPopular);
   const rest = makes.filter((m) => !m.isPopular);

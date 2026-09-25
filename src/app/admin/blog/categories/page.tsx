@@ -1,14 +1,14 @@
 import { getBlogCategories } from "@/lib/data/blog";
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { Container } from "@/components/ui/container";
 import { CategoryManager } from "@/components/admin/category-manager";
 
 export const metadata = {
-  title: "Blog Categories | AutoHauz Admin",
+  title: "Blog categories",
 };
 
 export default async function BlogCategoriesPage() {
-  await requireAdminRole(["content", "owner", "admin"]);
+  await requirePermission("content.write");
   const categories = await getBlogCategories();
 
   return (

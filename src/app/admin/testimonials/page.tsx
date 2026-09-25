@@ -1,10 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TestimonialsManager } from "./testimonials-manager";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Testimonials" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminTestimonialsPage() {
+  await requirePermission("content.write");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("testimonials")

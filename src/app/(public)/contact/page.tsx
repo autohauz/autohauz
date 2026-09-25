@@ -9,10 +9,12 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { formatAddress, hasAddress } from "@/config/business";
 import { site } from "@/config/site";
+import { MapEmbed } from "@/components/map-embed";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 export const metadata: Metadata = pageMetadata({
   path: "/contact",
-  title: `Contact ${site.brandName}`,
+  title: "Contact us",
   description: "Call, WhatsApp or send us a message. We reply during business hours.",
 });
 
@@ -51,11 +53,11 @@ export default async function ContactPage() {
               {hasChannels ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {phone ? (
-                    <a href={`tel:${phone.replace(/\s+/g, "")}`} className={channelClass}>
+                    <a href={telHref(phone)} className={channelClass}>
                       <Phone className="size-5 shrink-0 text-accent-bright" aria-hidden="true" />
                       <span>
                         <span className="block text-xs text-muted-foreground">Call us</span>
-                        <span className="font-semibold text-foreground">{phone}</span>
+                        <span className="font-semibold text-foreground">{formatPhoneForDisplay(phone)}</span>
                       </span>
                     </a>
                   ) : null}
@@ -92,7 +94,7 @@ export default async function ContactPage() {
                           <p className="font-semibold text-foreground">{business.tradingName || site.brandName}</p>
                           <p className="text-sm text-body">{address}</p>
                           <a
-                            href="https://maps.app.goo.gl/4ADouoQNkHQPd1go7"
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="mt-1 inline-block text-sm font-semibold text-accent underline-offset-4 hover:underline"
@@ -101,14 +103,7 @@ export default async function ContactPage() {
                           </a>
                         </div>
                       </div>
-                      <iframe
-                        title="Location Map"
-                        className="w-full rounded-md shadow-sm border border-border"
-                        style={{ height: '240px' }}
-                        loading="lazy"
-                        allowFullScreen
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
-                      />
+                      <MapEmbed address={address} />
                     </div>
                   ) : null}
                   {hours.length > 0 ? (

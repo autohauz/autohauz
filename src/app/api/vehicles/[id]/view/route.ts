@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientIp, hashIp } from "@/lib/security/ip";
 import { rateLimitSlidingWindow } from "@/lib/security/rate-limit-redis";
-import { getCurrentUser } from "@/lib/security/auth";
 
 export async function POST(
   request: NextRequest,
@@ -13,7 +12,7 @@ export async function POST(
     const ip = clientIp(request.headers);
     
     // Apply rate limiting (e.g. 60 requests per minute per IP)
-    const limit = await rateLimitSlidingWindow(`view:${ip}`, 60, 60_000);
+    const limit = await rateLimitSlidingWindow(`view:${hashIp(ip)}`, 60, 60_000);
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "Too many requests", retryAfter: limit.retryAfter },
@@ -21,9 +20,6 @@ export async function POST(
       );
     }
 
-    const ipHash = hashIp(ip);
-    const user = await getCurrentUser();
-    
     // Quick validation
     if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       return NextResponse.json({ error: "Invalid vehicle ID format" }, { status: 400 });
@@ -33,11 +29,8 @@ export async function POST(
 
     // Call the RPC to increment views
     // We use the admin client because the user might be unauthenticated and we need to write to the table
-    const { error } = await supabase.rpc("increment_vehicle_view", {
-      p_vehicle_id: id,
-      p_ip_hash: ipHash,
-      p_user_id: user?.id || null,
-    });
+    // Signature (migration 0009): increment_vehicle_view(p_vehicle_id uuid).
+    const { error } = await supabase.rpc("increment_vehicle_view", { p_vehicle_id: id });
 
     if (error) {
       console.error("Error incrementing vehicle view:", error);

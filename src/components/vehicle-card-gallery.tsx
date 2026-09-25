@@ -41,7 +41,8 @@ export function VehicleCardGallery({ coverImage, alt, images = [], priority, sol
         alt={alt}
         fill
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1440px) 33vw, 25vw"
-        priority={priority && currentIndex === 0}
+        preload={priority && currentIndex === 0}
+        fetchPriority={priority && currentIndex === 0 ? "high" : undefined}
         className={cn(
           "object-cover transition-[filter] duration-150 group-hover:brightness-[1.03]",
           sold && "grayscale-[40%]"
@@ -52,18 +53,20 @@ export function VehicleCardGallery({ coverImage, alt, images = [], priority, sol
       {hasMultiple && (
         <>
           <button
+            type="button"
             onClick={handlePrevious}
-            className="absolute left-2 top-1/2 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/gallery:opacity-100 focus:opacity-100"
+            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover/gallery:opacity-100 focus-visible:opacity-100"
             aria-label="Previous image"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-5" aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={handleNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/gallery:opacity-100 focus:opacity-100"
+            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover/gallery:opacity-100 focus-visible:opacity-100"
             aria-label="Next image"
           >
-            <ChevronRight className="size-5" />
+            <ChevronRight className="size-5" aria-hidden="true" />
           </button>
 
           {/* Camera Icon Overlay */}

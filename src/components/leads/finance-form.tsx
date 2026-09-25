@@ -24,6 +24,7 @@ export function FinanceForm({
   const [token, setToken] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   // Whether the buyer has hand-edited the amount fields. Once touched, we show
   // their value; until then the field mirrors the calculator (derived below —
@@ -43,9 +44,10 @@ export function FinanceForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!consent) {
-      setError("Tick the box to confirm we can contact you about finance.");
+      setConsentError("Tick the box to confirm we can contact you about finance.");
       return;
     }
+    setConsentError(null);
     setLoading(true);
     setError(null);
     const res = await submitLead({
@@ -128,7 +130,14 @@ export function FinanceForm({
           )}
         </Field>
       </div>
-      <ConsentCheckbox checked={consent} onChange={setConsent}>
+      <ConsentCheckbox
+        checked={consent}
+        onChange={(v) => {
+          setConsent(v);
+          if (v) setConsentError(null);
+        }}
+        error={consentError}
+      >
         I agree to be contacted about finance and for my details to be shared with a finance partner.
       </ConsentCheckbox>
       <TurnstileField onToken={setToken} />

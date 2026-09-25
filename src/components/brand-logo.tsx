@@ -19,7 +19,8 @@ const LOGO_RATIO = 480 / 189;
  * Assets are produced by `scripts/brand/build-brand-assets.mjs`.
  */
 export function BrandLogo({ variant = "primary", height = 40, className, priority = false }: BrandLogoProps) {
-  const src = variant === "dark" ? "/brand/logo-dark-480.png" : "/brand/logo-primary-480.png";
+  // WebP is ~30 KB vs ~100 KB for the PNG of the same artwork.
+  const src = variant === "dark" ? "/brand/logo-dark-480.webp" : "/brand/logo-primary-480.webp";
   const width = Math.round(height * LOGO_RATIO);
   return (
     <Image
@@ -27,8 +28,9 @@ export function BrandLogo({ variant = "primary", height = 40, className, priorit
       alt={site.brandName}
       width={width}
       height={height}
-      priority={priority}
-      fetchPriority={priority ? "high" : "auto"}
+      // Above-the-fold logos load eagerly, but are never preloaded at high
+      // priority: the hero photo is the LCP element, not the logo.
+      loading={priority ? "eager" : "lazy"}
       className={cn("shrink-0 select-none", className)}
       style={{ height, width }}
     />

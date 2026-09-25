@@ -144,3 +144,48 @@ export const vehicleCsvRowSchema = z.object({
 export type VehicleCreateInput = z.infer<typeof vehicleCreateSchema>;
 export type VehicleUpdateInput = z.infer<typeof vehicleUpdateSchema>;
 export type VehicleCsvRow = z.infer<typeof vehicleCsvRowSchema>;
+
+/**
+ * Vehicle photos as submitted by the admin form (`imageKeys` JSON).
+ *
+ * Keys are object paths inside the public `media` bucket's `vehicles/`
+ * folder. Anything else (an external URL, `..`, another folder) would be
+ * stored as a storage_key and rendered on the public site, so it is refused.
+ */
+export const VEHICLE_IMAGE_LIMIT = 40;
+
+const vehicleImageKey = z
+  .string()
+  .trim()
+  .max(300)
+  .regex(/^vehicles\/[^/\:?#\u0000-\u001f]+$/, "Invalid image path")
+  .refine((k) => !k.includes(".."), "Invalid image path");
+
+export const vehicleImagesSchema = z
+  .array(
+    z.object({
+      path: vehicleImageKey,
+      url: z.string().max(2048).optional().default(""),
+      isCover: z.boolean().optional().default(false),
+    }),
+  )
+  .max(VEHICLE_IMAGE_LIMIT, `A vehicle can have at most ${VEHICLE_IMAGE_LIMIT} photos`);
+
+export type VehicleImageInput = z.infer<typeof vehicleImagesSchema>[number];
+
+/** Parses the form's imageKeys field. `null` field → `null` (images untouched). */
+export function parseVehicleImages(
+  raw: FormDataEntryValue | null,
+): { ok: true; images: VehicleImageInput[] | null } | { ok: false; error: string } {
+  if (raw === null) return { ok: true, images: null };
+  if (typeof raw !== "string") return { ok: false, error: "Invalid photo data" };
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return { ok: false, error: "Invalid photo data" };
+  }
+  const parsed = vehicleImagesSchema.safeParse(json);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid photo data" };
+  return { ok: true, images: parsed.data };
+}

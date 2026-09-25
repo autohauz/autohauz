@@ -1,8 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import Image from "next/image";
-import { motion } from "framer-motion";
+import { ResponsiveImage } from "@/components/responsive-image";
 import { ArrowRight } from "lucide-react";
 
 const HELPFUL_GUIDES = [
@@ -48,23 +45,13 @@ export function HelpfulGuidesSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {HELPFUL_GUIDES.map((g, idx) => (
-            <motion.div
+          {HELPFUL_GUIDES.map((g) => (
+            <div
               key={g.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: idx * 0.1 }}
               className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-300"
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-muted">
-                <Image
-                  src={g.image}
-                  alt={g.title}
-                  fill
-                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
+                <ResponsiveImage src={g.image} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
               </div>
               <div className="flex flex-1 flex-col justify-between p-6">
                 <div>
@@ -77,11 +64,11 @@ export function HelpfulGuidesSection() {
                 </div>
                 <div className="mt-6 pt-4 border-t border-border/50">
                   <Link href={g.href} className="inline-flex items-center text-xs font-bold text-primary hover:underline">
-                    Read more <ArrowRight className="size-3.5 ml-1" />
+                    Read more<span className="sr-only">: {g.title}</span> <ArrowRight className="ml-1 size-3.5" aria-hidden="true" />
                   </Link>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

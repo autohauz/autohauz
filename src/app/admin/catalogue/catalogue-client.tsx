@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { createMake, deleteMake, createModel, deleteModel } from "./actions";
 import type { Make, Model } from "@/lib/domain";
 
-const inputCls = "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow";
+const inputCls = "rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:border-accent-bright transition-shadow";
 const btnPrimary = "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover transition-colors disabled:opacity-60";
 const btnDanger = "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10 transition-colors";
 

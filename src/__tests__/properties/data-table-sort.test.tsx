@@ -147,7 +147,7 @@ describe("Property 7: Data Table Sort Ordering", () => {
 
         // Click the sortable column header to trigger ascending sort
         const headerCells = container.querySelectorAll("th");
-        fireEvent.click(headerCells[columnIndex]);
+        fireEvent.click(headerCells[columnIndex].querySelector("button")!);
 
         // Extract column values from the rendered table
         const values = getColumnValues(container, columnIndex);
@@ -184,8 +184,8 @@ describe("Property 7: Data Table Sort Ordering", () => {
 
         // Click header once for ascending, then again for descending
         const headerCells = container.querySelectorAll("th");
-        fireEvent.click(headerCells[columnIndex]); // ascending
-        fireEvent.click(headerCells[columnIndex]); // descending
+        fireEvent.click(headerCells[columnIndex].querySelector("button")!); // ascending
+        fireEvent.click(headerCells[columnIndex].querySelector("button")!); // descending
 
         // Extract column values from the rendered table
         const values = getColumnValues(container, columnIndex);

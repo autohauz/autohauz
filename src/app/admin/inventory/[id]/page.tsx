@@ -6,6 +6,7 @@ import { updateVehicle } from "@/app/admin/inventory/actions";
 import { getMakes, getAllModels, getAllFeatures } from "@/lib/data/inventory";
 import { getActiveLocations } from "@/lib/data/locations";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Edit Vehicle" };
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function EditVehiclePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
+  await requirePermission("inventory.write");
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const id = resolvedParams.id;

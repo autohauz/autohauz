@@ -14,7 +14,7 @@ import { createMake, createModel } from "@/app/admin/catalogue/actions";
 type ActionResult = { ok?: boolean; error?: string } | void;
 type Action = (state: ActionResult, formData: FormData) => Promise<ActionResult>;
 
-const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow";
+const inputCls = "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus-visible:border-accent-bright transition-shadow";
 
 // A vehicle row (snake_case) for edit mode, loosely typed.
 type VehicleData = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -272,7 +272,7 @@ export function VehicleForm({
               ) : (
                 <div className="flex items-center gap-2">
                   <input type="hidden" name="makeId" value={makeId} />
-                  <input autoFocus placeholder="New make name" value={newMakeName} onChange={(e) => setNewMakeName(e.target.value)} className={inputCls} />
+                  <input autoFocus aria-label="New make name" placeholder="New make name" value={newMakeName} onChange={(e) => setNewMakeName(e.target.value)} className={inputCls} />
                   <button type="button" disabled={isCreatingInline} onClick={handleAddMake} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Save</button>
                   <button type="button" onClick={() => setIsAddingMake(false)} className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">Cancel</button>
                 </div>
@@ -292,7 +292,7 @@ export function VehicleForm({
               ) : (
                 <div className="flex items-center gap-2">
                   <input type="hidden" name="modelId" value={modelId} />
-                  <input autoFocus placeholder="New model name" value={newModelName} onChange={(e) => setNewModelName(e.target.value)} className={inputCls} />
+                  <input autoFocus aria-label="New model name" placeholder="New model name" value={newModelName} onChange={(e) => setNewModelName(e.target.value)} className={inputCls} />
                   <button type="button" disabled={isCreatingInline} onClick={handleAddModel} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Save</button>
                   <button type="button" onClick={() => setIsAddingModel(false)} className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">Cancel</button>
                 </div>

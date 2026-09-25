@@ -98,41 +98,45 @@ export function DataTable<T extends Record<string, unknown>>({
                 <TableHead
                   key={col.key}
                   numeric={col.numeric}
-                  className={cn(
-                    col.sortable && "cursor-pointer select-none hover:bg-muted/80 transition-colors"
-                  )}
-                  onClick={col.sortable ? () => handleSort(col.key) : undefined}
                   aria-sort={
                     sort.column === col.key
                       ? sort.direction === "asc"
                         ? "ascending"
                         : "descending"
-                      : undefined
+                      : col.sortable
+                        ? "none"
+                        : undefined
                   }
                 >
-                  <span className={cn("inline-flex items-center gap-1", col.numeric && "flex-row-reverse")}>
-                    {col.label}
-                    {col.sortable && (
+                  {col.sortable ? (
+                    // A real button: sortable headers were mouse-only (a click handler on <th>).
+                    <button
+                      type="button"
+                      onClick={() => handleSort(col.key)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-sm hover:text-foreground",
+                        col.numeric && "flex-row-reverse",
+                      )}
+                    >
+                      {col.label}
                       <span className="inline-flex flex-col" aria-hidden="true">
                         <ChevronUp
                           className={cn(
                             "size-3 -mb-0.5",
-                            sort.column === col.key && sort.direction === "asc"
-                              ? "text-primary"
-                              : "text-muted-foreground/40"
+                            sort.column === col.key && sort.direction === "asc" ? "text-primary" : "text-muted-foreground/40",
                           )}
                         />
                         <ChevronDown
                           className={cn(
                             "size-3 -mt-0.5",
-                            sort.column === col.key && sort.direction === "desc"
-                              ? "text-primary"
-                              : "text-muted-foreground/40"
+                            sort.column === col.key && sort.direction === "desc" ? "text-primary" : "text-muted-foreground/40",
                           )}
                         />
                       </span>
-                    )}
-                  </span>
+                    </button>
+                  ) : (
+                    col.label
+                  )}
                 </TableHead>
               ))}
             </TableRow>
@@ -170,7 +174,7 @@ export function DataTable<T extends Record<string, unknown>>({
             <select
               value={pageSize}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground focus-visible:border-accent-bright"
               aria-label="Rows per page"
             >
               {pageSizeOptions.map((size) => (

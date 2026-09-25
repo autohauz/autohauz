@@ -7,7 +7,7 @@ import { site } from "@/config/site";
 
 export const metadata = pageMetadata({
   path: "/how-it-works",
-  title: `How Buying a Car From ${site.brandName} Works`,
+  title: "How buying a car from us works",
   description: `From browsing to driving away — how buying a used car from ${site.brandName} works: search the stock, inspect the car, sort finance or a trade-in, and drive away.`,
 });
 

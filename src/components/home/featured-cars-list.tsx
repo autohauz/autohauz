@@ -42,18 +42,20 @@ export function FeaturedCarsList({ vehicles }: { vehicles: VehicleListItem[] }) 
   return (
     <div className="mt-6">
       {/* Category Pills */}
-      <div className="mb-8 flex flex-wrap items-center gap-3">
+      <div className="mb-8 flex flex-wrap items-center gap-3" role="group" aria-label="Filter featured cars by body type">
         {FILTERS.map((filter) => {
           const isActive = activeFilter === filter;
           return (
             <button
               key={filter}
+              type="button"
+              aria-pressed={isActive}
               onClick={() => setActiveFilter(filter)}
               className={cn(
-                "rounded-full px-5 py-2 text-sm font-medium transition-colors border",
+                "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[#0a1e3f] text-white border-[#0a1e3f]"
-                  : "bg-white text-[#4b5563] border-[#e5e7eb] hover:border-[#cbd5e1] hover:bg-gray-50"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-body hover:border-input hover:bg-muted",
               )}
             >
               {filter}
@@ -65,8 +67,8 @@ export function FeaturedCarsList({ vehicles }: { vehicles: VehicleListItem[] }) 
       {/* Grid */}
       {filteredVehicles.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {filteredVehicles.map((v, i) => (
-            <VehicleCard key={v.id} vehicle={v} priority={i < 2} />
+          {filteredVehicles.map((v) => (
+            <VehicleCard key={v.id} vehicle={v} />
           ))}
         </div>
       ) : (

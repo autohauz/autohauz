@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Inbox, Car, AlertTriangle, CheckCircle2, Clock, ArrowRight } from "lucide-react";
 import { getAdminDashboardMetrics } from "@/lib/data/dashboard";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function AdminDashboardPage() {
+  await requirePermission("dashboard.view");
   const metrics = await getAdminDashboardMetrics();
 
   const leads = metrics?.leads;

@@ -78,7 +78,7 @@ export function MfaChallenge({ mode, factorId }: Props) {
             </div>
             <p className="text-xs text-muted-foreground">
               Can&apos;t scan? Enter this key manually:{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] tracking-wider text-foreground">{enrol.secret}</code>
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm tracking-wider text-foreground">{enrol.secret}</code>
             </p>
           </div>
         ) : !error ? (

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminAuditTable } from "./audit-table";
 
@@ -10,7 +10,7 @@ interface AdminAuditPageProps {
 }
 
 export default async function AdminAuditPage({ searchParams }: AdminAuditPageProps) {
-  await requireAdmin();
+  await requirePermission("audit.view");
   const params = await searchParams;
   const supabase = createAdminClient();
 

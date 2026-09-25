@@ -72,7 +72,10 @@ export async function GET(
   return new NextResponse(fileData, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"
+      // The URL carries the access token, so a shared CDN copy would keep
+      // serving the feed for a day after the token is revoked. Channels poll
+      // hourly at most; a short private cache is enough.
+      "Cache-Control": "private, max-age=300"
     }
   });
 }

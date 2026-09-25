@@ -8,6 +8,7 @@ import { getBusinessProfile } from "@/lib/data/business";
 import { DEFAULT_ALLOWED_COUNTRIES } from "@/lib/security/geo-restriction";
 import { cn } from "@/lib/utils";
 import { site } from "@/config/site";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 /**
  * Geo-restriction landing page.
@@ -107,7 +108,7 @@ export default async function GeoBlockedPage() {
           ) : null}
           {whatsappNumber ? (
             <a
-              href={`https://wa.me/${whatsappNumber}`}
+              href={buildWhatsAppUrl(whatsappNumber)}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(buttonVariants({ variant: "outline", size: "cta" }))}

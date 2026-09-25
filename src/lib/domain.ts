@@ -240,6 +240,8 @@ export type EmailTemplate = {
   id: string;
   name: string;
   subject: string;
+  /** Structured content (block editor). Null for legacy raw-HTML templates. */
+  blocks: import("@/lib/email/blocks").EmailBlock[] | null;
   htmlBody: string;
   textBody: string | null;
   previewText: string | null;
@@ -404,12 +406,21 @@ export type Invoice = {
   gstRate: number;
   pricesIncludeGst: boolean;
 
+  /** "Tax Invoice" / "Invoice" — fixed at issue. Null on drafts. */
+  documentTitle: string | null;
+  /** Seller identity frozen at issue (null on drafts and legacy invoices). */
+  sellerSnapshot: InvoiceSellerSnapshot | null;
+  /** Vehicle particulars frozen at issue (null when no vehicle / drafts). */
+  vehicleSnapshot: InvoiceVehicleSnapshot | null;
+
   // Amounts
   subtotalCents: number;
   lineDiscountsCents: number;
   invoiceDiscountCents: number;
   netExGstCents: number;
   gstCents: number;
+  /** Portion of the total on which no GST is charged. */
+  gstFreeCents: number;
   totalIncGstCents: number;
   paymentsCents: number;
 
@@ -426,6 +437,28 @@ export type Invoice = {
   updatedAt: string;
 };
 
+export type InvoiceSellerSnapshot = {
+  legalName: string;
+  tradingName: string;
+  abn: string;
+  email: string;
+  phone: string;
+  address: string;
+  bank: { accountName: string; bsb: string; accountNumber: string; payId: string };
+};
+
+export type InvoiceVehicleSnapshot = {
+  stockId: string | null;
+  year: number | null;
+  make: string;
+  model: string;
+  variant: string | null;
+  vin: string | null;
+  registration: string | null;
+  regoExpiry: string | null;
+  odometerKm: number | null;
+};
+
 export type InvoiceItem = {
   id: string;
   invoiceId: string;
@@ -433,6 +466,8 @@ export type InvoiceItem = {
   quantity: number;
   unitPriceCents: number;
   discountCents: number;
+  /** False for GST-free lines (e.g. registration passed through at cost). */
+  gstApplicable: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

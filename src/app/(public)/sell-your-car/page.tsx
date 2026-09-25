@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Phone, MessageCircle } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -11,12 +10,13 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { withRegion } from "@/config/seo";
 import { cn } from "@/lib/utils";
+import { ResponsiveImage } from "@/components/responsive-image";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 export const metadata: Metadata = pageMetadata({
   path: "/sell-your-car",
-  title: withRegion("Sell to AutoHauz — Instant, Secure Appraisals"),
+  title: withRegion("Sell your car — free appraisal"),
   description: `${withRegion("Trade in or sell your vehicle directly to AutoHauz.")} We offer competitive, transparent valuations with immediate payment upon inspection.`,
-  keywords: ["sell my car", "car valuation", "sell used car"],
 });
 
 export const revalidate = 3600;
@@ -37,13 +37,7 @@ export default async function SellYourCarPage() {
       <SiteHeader />
       <main id="main">
         <section className="relative h-[40vh] min-h-[320px] w-full bg-[#040f24] overflow-hidden">
-          <Image
-            src="/images/heroes/sell-car-hero.jpg"
-            alt="Professional vehicle appraisal"
-            fill
-            priority
-            className="object-cover opacity-80"
-          />
+          <ResponsiveImage src="/images/heroes/sell-car-hero.jpg" alt="" fill priority className="object-cover opacity-80" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
         </section>
         
@@ -80,8 +74,8 @@ export default async function SellYourCarPage() {
                   <h2 className="text-base font-semibold">Prefer to talk?</h2>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {phone ? (
-                      <a href={`tel:${phone.replace(/\s+/g, "")}`} className={cn(buttonVariants({ variant: "outline" }))}>
-                        <Phone aria-hidden="true" /> Call {phone}
+                      <a href={telHref(phone)} className={cn(buttonVariants({ variant: "outline" }))}>
+                        <Phone aria-hidden="true" /> Call {formatPhoneForDisplay(phone)}
                       </a>
                     ) : null}
                     {whatsappUrl ? (

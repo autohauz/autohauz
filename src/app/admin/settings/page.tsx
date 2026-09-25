@@ -2,11 +2,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getBusinessProfile } from "@/lib/data/business";
 import { getFinanceParams } from "@/lib/data/settings";
 import { SettingsForms } from "./settings-forms";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
+  await requirePermission("settings.manage");
   const supabase = createAdminClient();
   const [business, finance, { data: recipientsRow }] = await Promise.all([
     getBusinessProfile(),

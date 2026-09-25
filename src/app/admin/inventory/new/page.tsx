@@ -4,11 +4,13 @@ import { VehicleForm } from "@/components/admin/vehicle-form";
 import { createVehicle } from "@/app/admin/inventory/actions";
 import { getMakes, getAllModels, getAllFeatures } from "@/lib/data/inventory";
 import { getActiveLocations } from "@/lib/data/locations";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Add Vehicle" };
 export const dynamic = "force-dynamic";
 
 export default async function NewVehiclePage() {
+  await requirePermission("inventory.write");
   const [makes, models, features, locations] = await Promise.all([
     getMakes(), getAllModels(), getAllFeatures(), getActiveLocations(),
   ]);

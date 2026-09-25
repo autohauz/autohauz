@@ -5,6 +5,7 @@ import { getInventoryList } from "@/lib/data/dashboard";
 import { InventoryTable } from "./inventory-table";
 import { SyndicationBackfillBanner } from "@/components/admin/syndication-backfill-banner";
 import { BulkUpload } from "./bulk-upload";
+import { requirePermission } from "@/lib/security/auth";
 
 export const metadata = { title: "Inventory" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 const STATUS_TABS = ["all", "available", "reserved", "draft", "sold", "archived"];
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requirePermission("inventory.view");
   const resolvedSearchParams = await searchParams;
   const status = resolvedSearchParams?.status;
   const rows = await getInventoryList({ status: status && status !== "all" ? status : undefined });

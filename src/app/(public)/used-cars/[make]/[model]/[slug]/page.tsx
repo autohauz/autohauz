@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
+import { decodeSegment } from "@/lib/routing";
 import type { Metadata } from "next";
 import { ShieldCheck, BadgeCheck, Handshake, CircleDollarSign, MapPin, Check } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
@@ -28,12 +29,19 @@ import { withRegion } from "@/config/seo";
 
 export const revalidate = 900;
 
+// No pages are pre-built; each one is rendered on its first request and then
+// served from cache until `revalidate` (on-demand ISR). Without this, a
+// dynamic segment is rendered on every request and `revalidate` is ignored.
+export async function generateStaticParams() {
+  return [];
+}
+
 type Params = { make: string; model: string; slug: string };
 
 const FEATURE_GROUP_LABELS = { safety: "Safety", comfort: "Comfort", technology: "Technology", exterior: "Exterior" } as const;
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = decodeSegment((await params).slug);
   const v = await getVehicleBySlug(slug);
   if (!v) return { title: "Vehicle not found", robots: { index: false, follow: true } };
 
@@ -53,7 +61,6 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       // The car's own cover photo is the strongest social thumbnail and the
       // image Google associates with this vehicle entity.
       image: v.coverImageUrl,
-      keywords: [`${v.year} ${v.makeName} ${v.modelName}`, `used ${v.makeName} ${v.modelName} for sale`],
     }),
     // A sold car is expired inventory: crawlable so link equity flows to the
     // model hub, but out of the index. Archived cars 301 to the model page.
@@ -62,13 +69,19 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 }
 
 export default async function VehicleDetailPage({ params }: { params: Promise<Params> }) {
-  const { make, model, slug } = await params;
+  const raw = await params;
+  const [make, model, slug] = [raw.make, raw.model, raw.slug].map(decodeSegment);
   const [v, financeParams, phones] = await Promise.all([getVehicleBySlug(slug), getFinanceParams(), getPhoneNumbers()]);
   if (!v) {
     // Sold cars are archived 60 days after sale with a 301 to the model page.
     const rule = await resolveRedirect(`/used-cars/${make}/${model}/${slug}`);
     if (rule && rule.code !== 410) permanentRedirect(rule.toPath);
     notFound();
+  }
+
+  // The slug identifies the car; a wrong make/model prefix is a duplicate URL.
+  if (make !== v.makeSlug || model !== v.modelSlug) {
+    permanentRedirect(`/used-cars/${v.makeSlug}/${v.modelSlug}/${v.slug}`);
   }
 
   const similar = await getSimilarVehicles({ id: v.id, bodyType: v.bodyType, price: v.price });

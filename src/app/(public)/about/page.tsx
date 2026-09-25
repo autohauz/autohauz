@@ -8,6 +8,7 @@ import { getBusinessProfile } from "@/lib/data/business";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { site } from "@/config/site";
 import { formatAddress, hasAddress } from "@/config/business";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 /*
  * Config-driven copy with no stock imagery and no claims the business has
@@ -16,15 +17,15 @@ import { formatAddress, hasAddress } from "@/config/business";
 
 export const metadata = pageMetadata({
   path: "/about",
-  title: `About ${site.brandName}`,
-  description: `About ${site.brandName} — a premium Australian vehicle marketplace dedicated to rigorous inspections, transparent pricing, and exceptional customer service.`,
+  title: "About us",
+  description: `About ${site.brandName} — an Australian used-car dealership: inspected vehicles, upfront pricing, finance and trade-ins.`,
 });
 
 export const revalidate = 3600;
 
 const PRINCIPLES = [
   { icon: ShieldCheck, title: "Uncompromising Inspections", body: "Every AutoHauz vehicle undergoes a comprehensive mechanical and structural check before being listed." },
-  { icon: BadgeCheck, title: "Transparent Pricing", body: "No hidden fees or surprise on-road costs. The price you see is the absolute price you pay." },
+  { icon: BadgeCheck, title: "Transparent Pricing", body: "Prices are shown up front. Unless a price is marked drive-away, government charges such as stamp duty and registration are extra, and we itemise them before you commit." },
   { icon: CircleDollarSign, title: "Competitive Finance", body: "Clear, flexible finance solutions designed around your specific lifestyle and requirements." },
   { icon: Handshake, title: "Seamless Trade-ins", body: "We offer fair, data-backed valuations to make upgrading your vehicle completely effortless." },
 ];
@@ -81,8 +82,8 @@ export default async function AboutPage() {
                     <div>
                       <dt className="sr-only">Phone</dt>
                       <dd>
-                        <a href={`tel:${business.phone.replace(/\s+/g, "")}`} className="underline-offset-4 hover:underline">
-                          {business.phone}
+                        <a href={telHref(business.phone)} className="underline-offset-4 hover:underline">
+                          {formatPhoneForDisplay(business.phone)}
                         </a>
                       </dd>
                     </div>

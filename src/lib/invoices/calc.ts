@@ -2,6 +2,12 @@ export type InvoiceLineInput = {
   unitPriceCents: number;
   quantity: number;
   discountCents?: number;
+  /**
+   * Whether GST applies to this line. Defaults to true. Set false for
+   * GST-free items (e.g. registration, CTP, stamp duty passed through at cost).
+   * Which items are GST-free is the business's call, not the software's.
+   */
+  gstApplicable?: boolean;
 };
 
 export type CalculateInvoiceParams = {
@@ -22,58 +28,68 @@ export type InvoiceTotals = {
   totalDiscountCents: number; // lineDiscountsCents + invoiceDiscountCents
   netExGstCents: number;      // Total amount excluding GST
   gstCents: number;           // GST amount
+  gstFreeCents: number;       // Portion of the total on which no GST is charged
   totalIncGstCents: number;   // Total amount including GST (amount due before payments)
   paymentsCents: number;      // Amount already paid
   balanceDueCents: number;    // totalIncGstCents - paymentsCents
 };
 
+/**
+ * Invoice totals in integer cents.
+ *
+ * GST is calculated on the taxable portion only. An invoice-level discount is
+ * spread across taxable and GST-free lines in proportion to their value, so it
+ * reduces GST only by the share that falls on taxable supplies. With every
+ * line taxable (the default) this is exactly the single-rate calculation.
+ */
 export function calculateInvoiceTotals(params: CalculateInvoiceParams): InvoiceTotals {
   const { lines, settings, invoiceDiscountCents = 0, paymentsCents = 0 } = params;
 
   let subtotalCents = 0;
   let lineDiscountsCents = 0;
+  let taxableCents = 0;
+  let freeCents = 0;
 
   for (const line of lines) {
-    const qty = line.quantity;
-    const price = line.unitPriceCents;
+    const gross = line.unitPriceCents * line.quantity;
     const disc = line.discountCents ?? 0;
-    
-    subtotalCents += price * qty;
+    subtotalCents += gross;
     lineDiscountsCents += disc;
+    const net = Math.max(0, gross - disc);
+    if (settings.gstEnabled && line.gstApplicable !== false) taxableCents += net;
+    else freeCents += net;
   }
 
-  // The base total after all discounts (before applying GST logic)
-  const totalAfterDiscountsCents = Math.max(0, subtotalCents - lineDiscountsCents - invoiceDiscountCents);
   const totalDiscountCents = lineDiscountsCents + invoiceDiscountCents;
 
-  let netExGstCents = 0;
+  // Allocate the invoice discount proportionally (taxable share rounded, the
+  // GST-free share takes the remainder so the two always sum exactly).
+  const base = taxableCents + freeCents;
+  const discount = Math.min(invoiceDiscountCents, base);
+  const taxableShare = base > 0 ? Math.round((discount * taxableCents) / base) : 0;
+  const taxableAfter = Math.max(0, taxableCents - taxableShare);
+  const freeAfter = Math.max(0, freeCents - (discount - taxableShare));
+
   let gstCents = 0;
-  let totalIncGstCents = 0;
+  let netExGstCents: number;
+  let totalIncGstCents: number;
 
-  if (settings.gstEnabled) {
-    const rateMultiplier = settings.gstRate / 100; // e.g., 0.10
-
+  if (settings.gstEnabled && taxableAfter > 0) {
+    const rate = settings.gstRate / 100;
     if (settings.pricesIncludeGst) {
-      // totalAfterDiscountsCents is inclusive of GST
-      totalIncGstCents = totalAfterDiscountsCents;
-      // Extract GST: GST = Total - (Total / (1 + Rate))
-      const exGst = totalIncGstCents / (1 + rateMultiplier);
-      gstCents = Math.round(totalIncGstCents - exGst);
+      // Taxable amounts already include GST: GST = total − total / (1 + rate).
+      gstCents = Math.round(taxableAfter - taxableAfter / (1 + rate));
+      totalIncGstCents = taxableAfter + freeAfter;
       netExGstCents = totalIncGstCents - gstCents;
     } else {
-      // totalAfterDiscountsCents is exclusive of GST
-      netExGstCents = totalAfterDiscountsCents;
-      gstCents = Math.round(netExGstCents * rateMultiplier);
+      gstCents = Math.round(taxableAfter * rate);
+      netExGstCents = taxableAfter + freeAfter;
       totalIncGstCents = netExGstCents + gstCents;
     }
   } else {
-    // No GST
-    netExGstCents = totalAfterDiscountsCents;
-    gstCents = 0;
-    totalIncGstCents = totalAfterDiscountsCents;
+    netExGstCents = taxableAfter + freeAfter;
+    totalIncGstCents = netExGstCents;
   }
-
-  const balanceDueCents = Math.max(0, totalIncGstCents - paymentsCents);
 
   return {
     subtotalCents,
@@ -82,8 +98,9 @@ export function calculateInvoiceTotals(params: CalculateInvoiceParams): InvoiceT
     totalDiscountCents,
     netExGstCents,
     gstCents,
+    gstFreeCents: freeAfter,
     totalIncGstCents,
     paymentsCents,
-    balanceDueCents,
+    balanceDueCents: Math.max(0, totalIncGstCents - paymentsCents),
   };
 }

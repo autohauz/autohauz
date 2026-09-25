@@ -114,4 +114,56 @@ describe("calculateInvoiceTotals", () => {
     expect(result.gstCents).toBe(0);
     expect(result.balanceDueCents).toBe(0);
   });
+
+  describe("per-line GST", () => {
+    const settings = { gstEnabled: true, gstRate: 10, pricesIncludeGst: true };
+
+    it("charges no GST on GST-free lines (car inc. GST + rego at cost)", () => {
+      const r = calculateInvoiceTotals({
+        lines: [
+          { unitPriceCents: 2200000, quantity: 1 }, // $22,000 car, GST inclusive
+          { unitPriceCents: 85000, quantity: 1, gstApplicable: false }, // $850 rego
+        ],
+        settings,
+      });
+      expect(r.gstCents).toBe(200000);
+      expect(r.gstFreeCents).toBe(85000);
+      expect(r.totalIncGstCents).toBe(2285000);
+      expect(r.netExGstCents).toBe(2085000);
+    });
+
+    it("spreads an invoice discount proportionally and keeps totals exact", () => {
+      const r = calculateInvoiceTotals({
+        lines: [
+          { unitPriceCents: 30000, quantity: 1 },
+          { unitPriceCents: 10000, quantity: 1, gstApplicable: false },
+        ],
+        invoiceDiscountCents: 4000, // 3,000 on taxable, 1,000 on GST-free
+        settings,
+      });
+      expect(r.gstFreeCents).toBe(9000);
+      expect(r.gstCents).toBe(Math.round(27000 - 27000 / 1.1));
+      expect(r.totalIncGstCents).toBe(36000);
+      expect(r.netExGstCents + r.gstCents).toBe(r.totalIncGstCents);
+    });
+
+    it("treats every line as GST-free when GST is disabled", () => {
+      const r = calculateInvoiceTotals({
+        lines: [{ unitPriceCents: 10000, quantity: 1 }],
+        settings: { ...settings, gstEnabled: false },
+      });
+      expect(r.gstCents).toBe(0);
+      expect(r.gstFreeCents).toBe(10000);
+    });
+
+    it("never produces a negative total when discounts exceed the value", () => {
+      const r = calculateInvoiceTotals({
+        lines: [{ unitPriceCents: 1000, quantity: 1 }],
+        invoiceDiscountCents: 5000,
+        settings,
+      });
+      expect(r.totalIncGstCents).toBe(0);
+      expect(r.gstCents).toBe(0);
+    });
+  });
 });

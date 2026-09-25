@@ -1,22 +1,22 @@
-import { requireAdminRole } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { Container } from "@/components/ui/container";
-import { EmailTemplateForm } from "@/components/admin/email-template-form";
+import { EmailTemplateBuilder } from "@/components/admin/email-template-builder";
+import { getEmailSender } from "@/lib/email/marketing";
+import { getEmailVehicleOptions } from "@/lib/data/email-campaigns";
 
-export const metadata = {
-  title: "New Email Template | AutoHauz Admin",
-};
+export const metadata = { title: "New email template" };
 
 export default async function NewEmailTemplatePage() {
-  await requireAdminRole(["admin", "owner", "content"]);
+  await requirePermission("email.write");
+  const [sender, vehicleOptions] = await Promise.all([getEmailSender(), getEmailVehicleOptions()]);
 
   return (
     <Container>
       <div className="mb-8">
-        <h1 className="text-3xl font-heading font-extrabold text-foreground">New Email Template</h1>
-        <p className="text-muted-foreground mt-1">Design a new marketing email layout.</p>
+        <h1 className="font-heading text-3xl font-extrabold text-foreground">New email template</h1>
+        <p className="mt-1 text-muted-foreground">Build a marketing email from blocks. The preview updates as you type.</p>
       </div>
-
-      <EmailTemplateForm />
+      <EmailTemplateBuilder sender={sender} vehicleOptions={vehicleOptions} previewVehicles={{}} />
     </Container>
   );
 }

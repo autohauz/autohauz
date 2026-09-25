@@ -7,6 +7,7 @@ import { ButtonLink, buttonVariants } from "@/components/ui/button";
 import { getPhoneNumbers } from "@/lib/data/settings";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 export const metadata: Metadata = {
   title: "Thank you",
@@ -41,8 +42,8 @@ export default async function ThankYouPage({ searchParams }: { searchParams: Pro
           {phone || whatsappUrl ? (
             <div className="mt-8 flex flex-wrap justify-center gap-2">
               {phone ? (
-                <a href={`tel:${phone.replace(/\s+/g, "")}`} className={cn(buttonVariants({ variant: "outline" }))}>
-                  <Phone aria-hidden="true" /> Call {phone}
+                <a href={telHref(phone)} className={cn(buttonVariants({ variant: "outline" }))}>
+                  <Phone aria-hidden="true" /> Call {formatPhoneForDisplay(phone)}
                 </a>
               ) : null}
               {whatsappUrl ? (

@@ -18,11 +18,12 @@ vi.mock("next/cache", () => ({
   updateTag: vi.fn(),
 }));
 
-// requireApiAdmin() → getCurrentUser() → lib/supabase/server createClient()
+// requireApiPermission() → getCurrentUser() → lib/supabase/server createClient()
 vi.mock("../../lib/supabase/server", () => ({
   createClient: async () => ({
     auth: {
       getUser: async () => ({ data: { user: { id: "user-123", email: "staff@example.com" } }, error: null }),
+      mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: "aal1", nextLevel: "aal1" } }) },
     },
   }),
 }));

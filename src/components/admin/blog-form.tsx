@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,14 +33,10 @@ export function BlogForm({
     formData.set("body", body); // Add TipTap content
 
     try {
-      if (article) {
-        const res = await updateBlogArticle(article.id, formData);
-        if (res.error) throw new Error(res.error);
-        router.push("/admin/blog");
-      } else {
-        const res = await createBlogArticle(formData);
-        if (res.error) throw new Error(res.error);
-      }
+      const res = article ? await updateBlogArticle(article.id, formData) : await createBlogArticle(formData);
+      if (!res.ok) throw new Error(res.error);
+      router.push(article ? "/admin/blog" : `/admin/blog/${res.id}`);
+      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -53,13 +48,18 @@ export function BlogForm({
     if (!article || !confirm("Are you sure you want to delete this article? This cannot be undone.")) return;
     setIsPending(true);
     const res = await deleteBlogArticle(article.id);
-    if (res?.error) setError(res.error);
-    setIsPending(false);
+    if (!res.ok) {
+      setError(res.error);
+      setIsPending(false);
+      return;
+    }
+    router.push("/admin/blog");
+    router.refresh();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 pb-12">
-      {error && <div className="p-4 bg-danger/10 text-danger rounded-lg text-sm">{error}</div>}
+      {error && <div role="alert" className="rounded-lg bg-danger/10 p-4 text-sm text-danger">{error}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">

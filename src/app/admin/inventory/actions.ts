@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { updateTags } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { requireAdmin } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { vehicleCreateSchema, vehicleUpdateSchema } from "@/lib/validation/vehicle";
+import { vehicleCreateSchema, vehicleUpdateSchema, parseVehicleImages, vehicleStatuses } from "@/lib/validation/vehicle";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -165,7 +165,7 @@ async function writeVehicleImages(
 
 export async function createVehicle(_prev: unknown, formData: FormData) {
   try {
-    const user = await requireAdmin();
+    const user = await requirePermission("inventory.write");
     const rawRaw = Object.fromEntries(formData.entries());
     const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
     const raw = sanitizeRaw(rawRaw);
@@ -186,12 +186,10 @@ export async function createVehicle(_prev: unknown, formData: FormData) {
     const d = parsed.data;
     const supabase = createAdminClient();
 
-    // Parse images JSON early so we can start resolving media in parallel with slug build
-    let images: { path: string; url: string; isCover: boolean }[] = [];
-    const imageKeysJson = formData.get("imageKeys") as string | null;
-    if (imageKeysJson) {
-      try { images = JSON.parse(imageKeysJson); } catch { /* ignore malformed JSON */ }
-    }
+    // Parse + validate images early so media resolution can run in parallel with the slug build.
+    const imagesInput = parseVehicleImages(formData.get("imageKeys"));
+    if (!imagesInput.ok) return { error: imagesInput.error };
+    const images = imagesInput.images ?? [];
 
     // ── Parallel: build slug + resolve media asset IDs ──────────────────────
     const [slug, mediaResult] = await Promise.all([
@@ -246,7 +244,7 @@ export async function createVehicle(_prev: unknown, formData: FormData) {
 
 export async function updateVehicle(_prev: unknown, formData: FormData) {
   try {
-    const user = await requireAdmin();
+    const user = await requirePermission("inventory.write");
     const rawRaw = Object.fromEntries(formData.entries());
     const featureIds = formData.getAll("featureIds").map(String).filter(Boolean);
     const raw = sanitizeRaw(rawRaw);
@@ -268,12 +266,10 @@ export async function updateVehicle(_prev: unknown, formData: FormData) {
     const supabase = createAdminClient();
     const { featureIds: fids, id, ...cols } = d;
 
-    // Parse images JSON early
-    let images: { path: string; url: string; isCover: boolean }[] = [];
-    const imageKeysJson = formData.get("imageKeys") as string | null;
-    if (imageKeysJson) {
-      try { images = JSON.parse(imageKeysJson); } catch { /* ignore malformed JSON */ }
-    }
+    // Parse + validate images early. `null` = the Images tab was not submitted.
+    const imagesInput = parseVehicleImages(formData.get("imageKeys"));
+    if (!imagesInput.ok) return { error: imagesInput.error };
+    const images = imagesInput.images ?? [];
 
     const row = clean({
       variant: cols.variant, year: cols.year, mileage_km: cols.mileageKm, fuel_type: cols.fuelType,
@@ -316,10 +312,10 @@ export async function updateVehicle(_prev: unknown, formData: FormData) {
     }
 
     // ── Step 4: Replace vehicle images (only if imageKeys field was submitted) ─
-    // imageKeysJson === null means the Images tab was NOT included in this
+    // images === null means the Images tab was NOT included in this
     // submission — preserve existing images. An empty array "[]" means the
     // user cleared all images, which is a valid intentional action.
-    if (imageKeysJson !== null) {
+    if (imagesInput.images !== null) {
       const { error: deleteImagesError } = await supabase
         .from("vehicle_images")
         .delete()
@@ -345,21 +341,35 @@ export async function updateVehicle(_prev: unknown, formData: FormData) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function setVehicleStatus(id: string, status: string) {
-  const user = await requireAdmin();
+  const user = await requirePermission("inventory.write");
+  if (!(vehicleStatuses as readonly string[]).includes(status)) return { error: "Unknown status" };
   const supabase = createAdminClient();
+  const { data: current, error: readError } = await supabase
+    .from("vehicles")
+    .select("status, published_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!current) return { error: "Vehicle not found" };
+
+  const now = new Date().toISOString();
   const patch: Record<string, unknown> = { status };
-  if (status === "sold") patch.sold_at = new Date().toISOString();
-  if (status !== "draft") patch.published_at = new Date().toISOString();
+  // sold_at drives the 60-day archive; a sale that falls through clears it.
+  if (status === "sold") patch.sold_at = now;
+  else if (current.status === "sold") patch.sold_at = null;
+  // published_at is the first publication, not the last status change.
+  if (status !== "draft" && !current.published_at) patch.published_at = now;
+
   const { error } = await supabase.from("vehicles").update(patch).eq("id", id);
   if (error) return { error: error.message };
-  logActivityBg(user.id, `vehicle.status.${status}`, id);
+  logActivityBg(user.id, `vehicle.status.${status}`, id, { from: current.status, to: status });
   revalidatePublic();
   revalidatePath("/admin/inventory");
   return { ok: true };
 }
 
 export async function toggleFeatured(id: string, isFeatured: boolean) {
-  await requireAdmin();
+  await requirePermission("inventory.write");
   const supabase = createAdminClient();
   await supabase.from("vehicles").update({ is_featured: isFeatured }).eq("id", id);
   revalidatePublic();
@@ -368,7 +378,7 @@ export async function toggleFeatured(id: string, isFeatured: boolean) {
 }
 
 export async function deleteVehicle(id: string, shouldRedirect: boolean = true) {
-  const user = await requireAdmin();
+  const user = await requirePermission("inventory.delete");
   const supabase = createAdminClient();
   const { error } = await supabase.from("vehicles").delete().eq("id", id);
   if (error) return { error: error.message };

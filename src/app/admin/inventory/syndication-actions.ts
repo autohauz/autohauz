@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { updateTags } from "@/lib/cache";
-import { requireAdmin } from "@/lib/security/auth";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDefaultDealerId, getSyndicationVehicle } from "@/lib/data/syndication";
 import { evaluateReadiness } from "@/lib/syndication/readiness";
@@ -42,7 +42,7 @@ function clean<T extends Record<string, any>>(obj: T): T {
  * colleague's compliance edit is exactly the failure this guards.
  */
 export async function saveSyndicationExtra(_prev: unknown, formData: FormData): Promise<ActionResult> {
-  const user = await requireAdmin();
+  const user = await requirePermission("syndication.manage");
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = syndicationExtraSchema.safeParse({
@@ -136,7 +136,7 @@ export async function saveSyndicationExtra(_prev: unknown, formData: FormData): 
  * be wrong.
  */
 export async function approveGeneratedDescription(vehicleId: string): Promise<ActionResult> {
-  const user = await requireAdmin();
+  const user = await requirePermission("syndication.manage");
   const supabase = createAdminClient();
 
   const { data: existing } = await supabase

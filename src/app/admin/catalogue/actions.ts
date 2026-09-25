@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/security/auth";
+import { updateTags } from "@/lib/cache";
+import { requirePermission } from "@/lib/security/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
@@ -20,7 +21,7 @@ const modelSchema = z.object({
 });
 
 export async function createMake(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("catalogue.write");
   const parsed = makeSchema.safeParse({
     name: formData.get("name"),
     isPopular: formData.get("isPopular") === "on",
@@ -41,22 +42,24 @@ export async function createMake(_prev: unknown, formData: FormData) {
   }
 
   revalidatePath("/admin/catalogue");
+  updateTags("makes", "public");
   return { ok: true, id: data.id };
 }
 
 export async function deleteMake(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("catalogue.write");
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing ID" };
   const supabase = createAdminClient();
   const { error } = await supabase.from("makes").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/catalogue");
+  updateTags("makes", "public");
   return { ok: true };
 }
 
 export async function createModel(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("catalogue.write");
   const parsed = modelSchema.safeParse({
     makeId: formData.get("makeId"),
     name: formData.get("name"),
@@ -77,16 +80,18 @@ export async function createModel(_prev: unknown, formData: FormData) {
   }
 
   revalidatePath("/admin/catalogue");
+  updateTags("makes", "public");
   return { ok: true, id: data.id };
 }
 
 export async function deleteModel(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requirePermission("catalogue.write");
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing ID" };
   const supabase = createAdminClient();
   const { error } = await supabase.from("models").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/catalogue");
+  updateTags("makes", "public");
   return { ok: true };
 }

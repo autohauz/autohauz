@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createBlogCategory, updateBlogCategory, deleteBlogCategory } from "@/app/admin/blog/actions";
 import type { BlogCategory } from "@/lib/domain";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 
 export function CategoryManager({ initialCategories }: { initialCategories: BlogCategory[] }) {
   const [categories, setCategories] = useState(initialCategories);
@@ -26,12 +25,12 @@ export function CategoryManager({ initialCategories }: { initialCategories: Blog
     try {
       if (id) {
         const res = await updateBlogCategory(id, formData);
-        if (res.error) throw new Error(res.error);
+        if (!res.ok) throw new Error(res.error);
         setCategories(categories.map(c => c.id === id ? { ...c, name: formData.get("name") as string, slug: formData.get("slug") as string } : c));
         setEditingId(null);
       } else {
         const res = await createBlogCategory(formData);
-        if (res.error) throw new Error(res.error);
+        if (!res.ok) throw new Error(res.error);
         // Optimistic refresh would be better, but for now we just reload
         window.location.reload();
       }
@@ -46,7 +45,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Blog
     if (!confirm("Delete category? This might leave some articles uncategorized.")) return;
     setIsPending(true);
     const res = await deleteBlogCategory(id);
-    if (res.error) setError(res.error);
+    if (!res.ok) setError(res.error);
     else setCategories(categories.filter(c => c.id !== id));
     setIsPending(false);
   };

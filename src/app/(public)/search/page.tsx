@@ -1,8 +1,8 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 /**
- * The dedicated /search route now forwards into the main inventory listing,
- * which owns filtering + free-text search over the used-car schema.
+ * Legacy /search forwards permanently to the inventory listing, which owns
+ * filtering and free-text search. Every query parameter is carried over.
  */
 export default async function SearchPage({
   searchParams,
@@ -10,6 +10,10 @@ export default async function SearchPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q : "";
-  redirect(q ? `/used-cars?q=${encodeURIComponent(q)}` : "/used-cars");
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    for (const v of Array.isArray(value) ? value : value ? [value] : []) qs.append(key, v);
+  }
+  const query = qs.toString();
+  permanentRedirect(query ? `/used-cars?${query}` : "/used-cars");
 }

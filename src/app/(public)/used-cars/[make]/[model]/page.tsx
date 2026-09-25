@@ -27,7 +27,6 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
     sp,
     title: makeModelTitle(r.make.name, r.model.name),
     description: makeModelDescription(r.make.name, r.model.name),
-    keywords: [`used ${r.make.name} ${r.model.name}`, `${r.make.name} ${r.model.name} for sale`, `second hand ${r.make.name} ${r.model.name}`],
     thin: { total: await getVehicleCount({ make: r.make.slug, model: r.model.slug }), kind: "makeModel" },
   });
 }

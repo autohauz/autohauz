@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
 
 /*
  * AutoHauz token system — see DESIGN.md (the source of truth).
@@ -369,8 +370,13 @@
   height: 6px;
   border-radius: 9999px;
   background: var(--muted);
-  outline: none;
   cursor: pointer;
+}
+/* Visible keyboard focus (WCAG 2.4.7): this rule is unlayered, so it must
+   restate the ring rather than rely on the base-layer :focus-visible. */
+.finance-range:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 6px;
 }
 .finance-range::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -402,7 +408,7 @@
 /* ── Reduced motion: per rule, not a global 0.01ms override ───────────────── */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .animate-in, .animate-out, .animate-pulse-skeleton { animation: none !important; }
+  .animate-in, .animate-out, .animate-pulse-skeleton, .animate-pulse { animation: none !important; }
   /* Spinners stay: they are essential progress feedback. */
   *, *::before, *::after { transition-duration: 0s !important; }
 }

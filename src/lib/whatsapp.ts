@@ -3,29 +3,36 @@
  */
 
 /**
- * Normalise a phone number into the digits-only format wa.me expects.
- * Handles Australian local numbers (leading 0 → +61) and strips all
- * non-digit characters (spaces, dashes, parentheses, +).
+ * Normalises a phone number to the international digits-only form wa.me
+ * expects (no "+", no spaces). Australian numbers in any common form become
+ * 61 + national number without the trunk 0:
  *
- * Examples:
- *   "0412 345 678"   → "61412345678"
- *   "+61 412 345 678"→ "61412345678"
- *   "02 1234 5678"   → "61212345678"
+ *   "0412 345 678"      → "61412345678"
+ *   "+61 412 345 678"   → "61412345678"
+ *   "+61 (0) 412 345 678", "+61 0412…" → "61412345678"  (stray trunk 0)
+ *   "0061 412 345 678"  → "61412345678"                  (international prefix)
+ *   "412 345 678"       → "61412345678"                  (national number, no 0)
+ *   "(02) 9876 5432"    → "61298765432"
+ * Numbers with another country code ("+64 21 …") are kept as given.
  */
 export function normaliseWhatsAppNumber(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
+  const trimmed = raw.trim();
+  let digits = trimmed.replace(/\D/g, "");
 
-  // Already has country code (61...)
+  // International dialling prefix from Australia.
+  if (digits.startsWith("0011")) digits = digits.slice(4);
+  else if (digits.startsWith("00")) digits = digits.slice(2);
+
   if (digits.startsWith("61")) {
-    return digits;
+    const national = digits.slice(2).replace(/^0+/, ""); // "+61 (0)4…" → drop the trunk 0
+    return `61${national}`;
   }
 
-  // Australian local number starting with 0 → replace with 61
-  if (digits.startsWith("0")) {
-    return "61" + digits.slice(1);
-  }
+  // Australian national formats: trunk 0 + 9 digits, or the 9 digits alone.
+  if (/^0[2-478]\d{8}$/.test(digits)) return `61${digits.slice(1)}`;
+  if (!trimmed.startsWith("+") && /^[2-478]\d{8}$/.test(digits)) return `61${digits}`;
 
-  // Otherwise assume it already includes a country code
+  // Anything else already carries its own country code.
   return digits;
 }
 

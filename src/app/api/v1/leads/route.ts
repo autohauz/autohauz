@@ -6,6 +6,7 @@ import { checkSpam, normalizePhone } from "@/lib/leads/spam-check";
 import { clientIp, hashIp } from "@/lib/security/ip";
 import { notifyNewLead } from "@/lib/leads/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidateTags } from "@/lib/cache";
 
 export const runtime = "nodejs";
 
@@ -72,9 +73,16 @@ export async function POST(request: NextRequest) {
   // bots aren't taught what tripped the filter.
   const spam = checkSpam({ website: data.website, formRenderedAt: data.formRenderedAt, email: data.email || undefined });
 
-  // Turnstile (skipped in dev / when unconfigured).
+  // Turnstile. A failed token quarantines the lead; Cloudflare being
+  // unreachable says nothing about the visitor, so that lead is kept as a
+  // normal enquiry and marked for review rather than lost or binned.
   const turnstile = await verifyTurnstile(data.turnstileToken, ip);
-  const flaggedSpam = spam.isSpam || !turnstile.ok;
+  const flaggedSpam = spam.isSpam || turnstile.status === "failed";
+  const screening = {
+    turnstile: turnstile.status,
+    ...(turnstile.ok ? {} : { turnstileReason: turnstile.reason }),
+    ...(spam.reason ? { spamReason: spam.reason } : {}),
+  };
 
   const supabase = createAdminClient();
   const meta = data.meta ?? {};
@@ -86,7 +94,8 @@ export async function POST(request: NextRequest) {
     email: data.email || null,
     message: data.message || null,
     vehicle_id: "vehicleId" in data ? data.vehicleId ?? null : null,
-    payload: buildPayload(data as Record<string, unknown>),
+    // Screening verdict is kept so staff can see why a lead was quarantined.
+    payload: { ...buildPayload(data as Record<string, unknown>), _screening: screening },
     source_url: meta.sourceUrl ?? null,
     utm: meta.utm ?? {},
     referrer: meta.referrer ?? null,
@@ -98,8 +107,11 @@ export async function POST(request: NextRequest) {
   // Durable persist BEFORE acknowledging (zero-lead-loss, SRS NFR-4).
   const { data: leadId, error } = await supabase.rpc("create_lead_with_event", { p_lead: leadRecord });
   if (error || !leadId) {
+    console.error("[leads] create_lead_with_event failed:", error?.message ?? "no id returned");
     return NextResponse.json({ data: null, error: { message: "Could not save your enquiry. Please call us." } }, { status: 500 });
   }
+
+  revalidateTags("leads"); // admin dashboard KPIs
 
   // Notify sales (best-effort; genuine leads only). Never blocks the response.
   if (!flaggedSpam) {
