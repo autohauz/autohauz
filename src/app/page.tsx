@@ -65,7 +65,7 @@ export default async function HomePage() {
         <section className="relative overflow-hidden bg-[#040f24] pb-28 pt-16 sm:pb-32 sm:pt-16 lg:pb-32 lg:pt-12">
           <div className="absolute inset-0 z-0">
             <ResponsiveImage src="/images/heroes/user-hero.jpg" alt="" fill priority className="object-cover object-right" sizes="100vw" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent sm:w-2/3" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent sm:w-3/4" />
           </div>
           
           <Container className="relative z-10">
