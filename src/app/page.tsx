@@ -65,15 +65,16 @@ export default async function HomePage() {
         <section className="relative overflow-hidden bg-[#040f24] pb-28 pt-16 sm:pb-32 sm:pt-16 lg:pb-32 lg:pt-12">
           <div className="absolute inset-0 z-0">
             <ResponsiveImage src="/images/heroes/user-hero.jpg" alt="" fill priority className="object-cover object-right" sizes="100vw" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent sm:w-2/3" />
           </div>
           
           <Container className="relative z-10">
-            <div className="max-w-2xl rounded-2xl border border-white/10 bg-black/40 p-6 backdrop-blur-md sm:p-8">
+            <div className="max-w-2xl text-white py-12">
               <div className="mb-3 flex items-center gap-2 text-[12px] font-bold tracking-[0.15em] text-[#2B8BF6] uppercase">
                 <Navigation className="size-4" aria-hidden="true" />
                 <span>QUALITY PRE-OWNED CARS</span>
               </div>
-              <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-[56px] lg:leading-[1.1]">
+              <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-[56px] lg:leading-[1.1]">
                 Find the Right Car <br />
                 For <span className="text-[#2B8BF6]">What&apos;s Next</span>
               </h1>
