@@ -94,12 +94,35 @@ export function AdminSidebar({
           <Link href="/admin" className="font-heading text-lg font-extrabold text-foreground">{site.brandName} <span className="text-accent-bright">Admin</span></Link>
         </div>
         {links}
-        <div className="mt-auto border-t border-border p-4 text-xs text-muted-foreground">
-          {userName && <p className="truncate font-semibold text-foreground">{userName}</p>}
-          <p className="truncate">{userEmail}</p>
-          {role ? <p className="capitalize">{role.replace("_", " ")}</p> : null}
-          <form action="/auth/sign-out" method="POST">
-            <button type="submit" className="mt-2 inline-block text-muted-foreground hover:text-foreground text-left transition-colors">Sign out</button>
+        <div className="mt-auto border-t border-border p-4 space-y-3">
+          {/* User info */}
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground text-sm font-bold">
+              {(userName ?? userEmail ?? "A")[0].toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              {userName && <p className="truncate text-sm font-semibold text-foreground">{userName}</p>}
+              <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
+              {role && (
+                <span className="inline-block mt-0.5 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-bright capitalize">
+                  {role.replace("_", " ")}
+                </span>
+              )}
+            </div>
+          </div>
+          {/* Sign out */}
+          <form action="/auth/sign-out" method="POST" className="w-full">
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Sign Out
+            </button>
           </form>
         </div>
       </aside>
