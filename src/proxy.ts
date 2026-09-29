@@ -300,9 +300,31 @@ export async function proxy(request: NextRequest) {
 
   // Verified against Supabase Auth — never `getSession()`, which trusts the
   // cookie without verification (see getCurrentUser in lib/security/auth.ts).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data?.user ?? null;
+
+    // A stale refresh token (e.g. after a DB reset) causes an infinite loop:
+    // the middleware redirects to sign-in, the page loads, the client tries to
+    // refresh, gets 400, and the cycle repeats. Break it by clearing all auth
+    // cookies before redirecting so the next request starts fresh.
+    if (result.error && (result.error as { code?: string }).code === "refresh_token_not_found") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/auth/sign-in";
+      redirectUrl.search = "";
+      const clearResponse = NextResponse.redirect(redirectUrl);
+      // Expire every Supabase auth cookie so the browser sends nothing next time.
+      request.cookies.getAll().forEach((cookie) => {
+        if (cookie.name.startsWith("sb-") || cookie.name.includes("supabase")) {
+          clearResponse.cookies.set(cookie.name, "", { maxAge: 0, path: "/" });
+        }
+      });
+      return finalise(clearResponse);
+    }
+  } catch {
+    user = null;
+  }
 
   if (!user) {
     // Signed-out visitors never reach an admin render. This is the first of

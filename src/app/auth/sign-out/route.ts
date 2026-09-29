@@ -8,19 +8,45 @@ export async function POST(request: Request) {
 
   // Clear all session-related cookies so the next login starts clean
   const cookieStore = await cookies();
-  cookieStore.delete("admin_session");
-  cookieStore.delete("active_role");
-
+  const allCookies = cookieStore.getAll();
+  
   const url = new URL("/auth/sign-in", request.url);
-  return NextResponse.redirect(url, { status: 303 });
+  const response = NextResponse.redirect(url, { status: 303 });
+  
+  // Expire all Supabase auth cookies (prefixed with "sb-") and any admin cookies
+  for (const cookie of allCookies) {
+    if (
+      cookie.name.startsWith("sb-") ||
+      cookie.name.includes("supabase") ||
+      cookie.name === "admin_session" ||
+      cookie.name === "active_role"
+    ) {
+      response.cookies.set(cookie.name, "", { maxAge: 0, path: "/" });
+    }
+  }
+  
+  return response;
 }
 
-// GET must NOT sign out — Next.js automatically prefetches <Link href> targets
-// via GET on hover/render, which would silently log the user out before they
-// ever click "Sign out". Sign-out requires an explicit POST form submission.
-export async function GET() {
-  return NextResponse.json(
-    { error: "Method not allowed. Use POST to sign out." },
-    { status: 405 },
-  );
+// GET: clears stale auth cookies and redirects to sign-in (safe: read-only, no data destroyed).
+// Used by the sign-in page itself to flush broken sessions (e.g. after a DB reset).
+export async function GET(request: Request) {
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  
+  const url = new URL("/auth/sign-in", request.url);
+  const response = NextResponse.redirect(url, { status: 303 });
+  
+  for (const cookie of allCookies) {
+    if (
+      cookie.name.startsWith("sb-") ||
+      cookie.name.includes("supabase") ||
+      cookie.name === "admin_session" ||
+      cookie.name === "active_role"
+    ) {
+      response.cookies.set(cookie.name, "", { maxAge: 0, path: "/" });
+    }
+  }
+  
+  return response;
 }

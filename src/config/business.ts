@@ -69,7 +69,7 @@ export const businessDefaults: BusinessProfile = {
   legalName: "AutoHauz Pty Ltd",
   tradingName: "AutoHauz",
   abn: "",
-  email: "info@jashire.com.au",
+  email: "info@autohauz.com.au",
   phone: "+61492962418",
   whatsapp: "+61492962418",
   address: { street: "14 Harvey Rd", suburb: "Kings Park", state: "NSW", postcode: "2148", country: "Australia" },

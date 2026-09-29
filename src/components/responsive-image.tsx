@@ -11,7 +11,7 @@ const RESPONSIVE_WIDTHS: Record<string, number[]> = {
 
 function variants(src: string) {
   const dir = Object.keys(RESPONSIVE_WIDTHS).find((d) => src.startsWith(d));
-  if (!dir) throw new Error(`No responsive variants are generated for ${src}`);
+  if (!dir) return null;
   const base = src.replace(/\.jpe?g$/i, "");
   const widths = RESPONSIVE_WIDTHS[dir];
   return {
@@ -45,7 +45,26 @@ export function ResponsiveImage({
   width?: number;
   height?: number;
 }) {
-  const { srcSet, fallback } = variants(src);
+  const v = variants(src);
+  
+  if (!v) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        sizes={sizes}
+        alt={alt}
+        width={width}
+        height={height}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding={priority ? "sync" : "async"}
+        className={cn(fill && "absolute inset-0 h-full w-full", className)}
+      />
+    );
+  }
+
+  const { srcSet, fallback } = v;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- pre-optimised variants; the Next optimiser is off
     <img

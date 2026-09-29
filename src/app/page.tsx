@@ -64,7 +64,7 @@ export default async function HomePage() {
         {/* Hero — Immersive automotive image background with text-safe gradient on the left */}
         <section className="relative overflow-hidden bg-[#040f24] pb-28 pt-16 sm:pb-32 sm:pt-16 lg:pb-32 lg:pt-12">
           <div className="absolute inset-0 z-0">
-            <ResponsiveImage src="/images/heroes/homepage-hero.jpg" alt="" fill priority className="object-cover object-right" sizes="100vw" />
+            <ResponsiveImage src="/images/heroes/user-hero.jpg" alt="" fill priority className="object-cover object-right" sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#040f24] via-[#040f24]/90 to-transparent sm:via-[#040f24]/70" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#040f24] via-transparent to-transparent opacity-90" />
           </div>

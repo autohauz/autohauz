@@ -87,9 +87,7 @@ export async function SiteFooter() {
   const address = formatAddress(business.address);
   // A search link rather than an embedded map: the Maps iframe pulled ~1 MB of
   // third-party script into every public page. /contact keeps the live map.
-  const directionsUrl = hasAddress(business.address)
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
-    : null;
+  const directionsUrl = "https://maps.app.goo.gl/tteBK4xGkyq7zKye7";
   const hours = DAYS.filter(([key]) => business.hours[key]);
   const socials = socialProfiles(business.social);
   const year = new Date().getFullYear();

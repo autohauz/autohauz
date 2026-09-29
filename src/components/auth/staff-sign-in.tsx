@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { safeAdminRedirect } from "@/lib/routing";
 import { BrandLogo } from "@/components/brand-logo";
@@ -21,6 +21,7 @@ export function StaffSignIn() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     urlError === "unauthorized" 
@@ -29,6 +30,19 @@ export function StaffSignIn() {
       ? "Authentication failed. Please try again."
       : null
   );
+
+  // On mount: silently clear any stale Supabase session cookies so the login
+  // form starts from a clean state. This handles the "refresh_token_not_found"
+  // infinite-redirect loop that occurs after a database reset.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        // No valid session — sign out to flush any stale/partial cookies
+        supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      }
+    });
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,13 +89,24 @@ export function StaffSignIn() {
         </Field>
         <Field id="password" label="Password" required>
           {(props) => (
-            <Input
-              {...props}
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                {...props}
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           )}
         </Field>
         {error ? (

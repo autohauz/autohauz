@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
   // Remove "X-Powered-By: Next.js" from every response — reduces attack surface
   // by not advertising the framework to automated scanners.
   poweredByHeader: false,
+  // Allow 127.0.0.1 as a dev origin so that HMR WebSocket connections and
+  // auth session cookies work when the browser uses the numeric address instead
+  // of "localhost" (the two are treated as different origins by the browser).
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   experimental: {
     serverActions: {
       // No Server Action receives files (photos upload straight to Supabase
