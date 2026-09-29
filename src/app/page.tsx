@@ -65,21 +65,21 @@ export default async function HomePage() {
         <section className="relative overflow-hidden bg-[#040f24] pb-28 pt-16 sm:pb-32 sm:pt-16 lg:pb-32 lg:pt-12">
           <div className="absolute inset-0 z-0">
             <ResponsiveImage src="/images/heroes/user-hero.jpg" alt="" fill priority className="object-cover object-right" sizes="100vw" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#040f24] via-[#040f24]/90 to-transparent sm:via-[#040f24]/70" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#040f24] via-transparent to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#040f24]/95 via-[#040f24]/70 to-transparent sm:via-[#040f24]/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#040f24]/90 via-[#040f24]/20 to-transparent opacity-80" />
           </div>
           
           <Container className="relative z-10">
-            <div className="max-w-2xl text-white">
-              <div className="mb-3 flex items-center gap-2 text-[12px] font-bold tracking-[0.15em] text-[#2B8BF6] uppercase">
+            <div className="max-w-2xl text-white drop-shadow-md">
+              <div className="mb-3 flex items-center gap-2 text-[12px] font-bold tracking-[0.15em] text-[#2B8BF6] uppercase drop-shadow-sm">
                 <Navigation className="size-4" aria-hidden="true" />
                 <span>QUALITY PRE-OWNED CARS</span>
               </div>
-              <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-[56px] lg:leading-[1.1]">
+              <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-[56px] lg:leading-[1.1] drop-shadow-lg">
                 Find the Right Car <br />
-                For <span className="text-[#2B8BF6]">What&apos;s Next</span>
+                For <span className="text-[#2B8BF6] drop-shadow-none">What&apos;s Next</span>
               </h1>
-              <p className="mt-4 max-w-xl text-lg font-medium text-white/90 sm:text-lg">
+              <p className="mt-4 max-w-xl text-lg font-medium text-white/90 sm:text-lg drop-shadow-md">
                 Carefully selected. Professionally inspected. Ready for Australian roads. Whether you&apos;re buying, selling or upgrading, AutoHauz makes it simple.
               </p>
               
