@@ -6,19 +6,19 @@ const HELPFUL_GUIDES = [
   {
     title: "What to check before buying a used car",
     desc: "Practical tips to help you make a confident decision.",
-    image: "/images/heroes/user-hero.jpg",
+    image: "/images/heroes/guide-buy-car.jpg",
     href: "/faqs",
   },
   {
     title: "A simple guide to car finance in Australia",
     desc: "Understand your options and what to consider.",
-    image: "/images/heroes/user-guide1.jpg",
+    image: "/images/heroes/guide-finance.jpg",
     href: "/finance",
   },
   {
     title: "How to get the best value when selling your car",
     desc: "Expert advice to help you get a great result.",
-    image: "/images/heroes/user-guide2.jpg",
+    image: "/images/heroes/guide-sell-car.jpg",
     href: "/sell-your-car",
   },
 ];
