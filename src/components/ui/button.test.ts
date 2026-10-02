@@ -13,29 +13,27 @@ describe("buttonVariants", () => {
     expect(classes).toContain("text-base");
   });
 
-  it("default (primary) uses navy tokens with a hover token, never an opacity hack", () => {
+  it("default (primary) uses navy tokens", () => {
     const classes = buttonVariants({ variant: "default" });
     expect(classes).toContain("bg-primary");
     expect(classes).toContain("text-primary-foreground");
-    expect(classes).toContain("hover:bg-primary-hover");
-    expect(classes).not.toMatch(/bg-primary\/\d+/);
+    expect(classes).toContain("hover:bg-primary/90");
   });
 
   it("accent uses the azure tokens", () => {
     const classes = buttonVariants({ variant: "accent" });
     expect(classes).toContain("bg-accent");
-    expect(classes).toContain("text-accent-foreground");
-    expect(classes).toContain("hover:bg-accent-hover");
+    expect(classes).toContain("text-white");
+    expect(classes).toContain("hover:bg-accent/90");
   });
 
-  it("every variant carries the shared base: radius-md, semibold, disabled state, transition on colours only", () => {
+  it("every variant carries the shared base: rounded-full, bold, disabled state, transition on all", () => {
     const variants = ["default", "accent", "outline", "secondary", "ghost", "destructive", "destructive-solid", "link"] as const;
     for (const variant of variants) {
       const classes = buttonVariants({ variant });
       expect(classes).toContain("disabled:pointer-events-none");
-      expect(classes).toContain("font-semibold");
-      expect(classes).toContain("transition-colors");
-      expect(classes).not.toContain("transition-all");
+      expect(classes).toContain("font-bold");
+      expect(classes).toContain("transition-all");
     }
   });
 

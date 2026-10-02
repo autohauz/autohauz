@@ -85,16 +85,16 @@ export default async function HomePage() {
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 <Link 
                   href="/used-cars" 
-                  className="inline-flex h-[46px] items-center justify-center gap-2 rounded-md bg-accent px-7 text-[14px] font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-8 text-[15px] font-bold tracking-wide text-white shadow-lg shadow-accent/30 transition-all hover:scale-105 hover:bg-accent/90 hover:shadow-xl hover:shadow-accent/40"
                 >
-                  Browse cars <ArrowRight className="size-4" aria-hidden="true" />
+                  Browse Cars <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
                 <Link 
                   href="/sell-your-car" 
-                  className="inline-flex h-[46px] items-center justify-center gap-2 rounded-md border border-white/40 bg-transparent px-7 text-[14px] font-semibold text-white transition-colors hover:bg-white/10"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border-2 border-white/30 bg-transparent px-8 text-[15px] font-bold tracking-wide text-white transition-all hover:border-white hover:bg-white/10 hover:scale-[1.02]"
                 >
                   <Car className="size-[18px]" aria-hidden="true" />
-                  Sell your car
+                  Sell Your Car
                 </Link>
               </div>
 

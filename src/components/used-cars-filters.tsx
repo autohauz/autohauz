@@ -213,7 +213,7 @@ export function UsedCarsFilters({
 function FilterGroup({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-semibold text-foreground">
+      <label htmlFor={id} className="mb-3 block text-sm font-bold tracking-wide text-foreground uppercase">
         {label}
       </label>
       {children}
@@ -234,8 +234,8 @@ function FacetGroup({
 }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-semibold text-foreground">{label}</legend>
-      <ul className="space-y-1">
+      <legend className="mb-3 text-sm font-bold tracking-wide text-foreground uppercase">{label}</legend>
+      <ul className="space-y-1.5">
         {options.map((o) => {
           const active = current === o.value;
           return (
@@ -245,12 +245,14 @@ function FacetGroup({
                 aria-pressed={active}
                 onClick={() => onSelect(active ? null : o.value)}
                 className={cn(
-                  "flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-150",
-                  active ? "bg-accent-soft font-semibold text-accent-soft-foreground" : "text-body hover:bg-muted hover:text-foreground",
+                  "flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all duration-200",
+                  active 
+                    ? "bg-accent/10 font-bold text-accent shadow-sm ring-1 ring-accent/20" 
+                    : "font-medium text-muted-foreground hover:bg-neutral-100 hover:text-foreground",
                 )}
               >
                 <span>{o.label}</span>
-                <span className={cn("tabular text-xs", active ? "text-accent-soft-foreground" : "text-muted-foreground")}>{o.count}</span>
+                <span className={cn("tabular text-xs font-semibold px-2 py-0.5 rounded-full", active ? "bg-accent/20 text-accent" : "bg-neutral-100 text-neutral-500")}>{o.count}</span>
               </button>
             </li>
           );
@@ -273,7 +275,7 @@ type NumberInputProps = {
 function RangeGroup({ label, from, to }: { label: string; from: NumberInputProps; to: NumberInputProps }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-semibold text-foreground">{label}</legend>
+      <legend className="mb-3 text-sm font-bold tracking-wide text-foreground uppercase">{label}</legend>
       <div className="flex items-center gap-2">
         <NumberInput {...from} />
         <span className="text-muted-foreground" aria-hidden="true">

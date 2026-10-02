@@ -32,14 +32,15 @@ One family: **Archivo** (variable, width axis), self-hosted via `next/font`, `di
 ## 4. Space, shape, depth
 
 - Spacing: Tailwind 4-px scale; section rhythm via `<Section>` (py-16/24, tight py-10/14); page gutters via `<Container>` (16/24/32 px).
-- Radii: sm 4, md 8 (controls, buttons), lg 12 (cards), xl 20 (feature panels). Use `rounded-md`/`rounded-lg`/`rounded-xl`; `rounded-full` only for pills, avatars, icon buttons.
-- Shadows: `shadow-card` (resting cards), `shadow-float` (popovers, dialogs, sticky bars). No stacked or coloured glows.
+- Radii: Premium geometry. Inputs and standard controls use `rounded-md` (12px), feature cards use `rounded-2xl` (24px) for a soft approachable feel. All primary conversion actions, pagination, search bars, and active filter chips strictly use `rounded-full` (pill shape).
+- Shadows: Subtle, realistic depth. Primary components use layered soft shadows (`shadow-sm`, `shadow-md`, `shadow-lg`) instead of harsh borders to distinguish hierarchy. Custom tinted shadows (e.g., `shadow-accent/30`) are used to elevate CTAs.
 - z-index: header 40, sticky CTA/float 50, sheet 60, modal 70 (CSS variables).
 
 ## 5. Motion
 
-- Only state transitions: colour/opacity 150 ms (`--duration-fast`), panels 240 ms (`--duration-base`), `--ease-out`.
-- **No scroll-reveal, hover-lift, image zoom, or parallax.** Content is visible in the server HTML.
+- Only state transitions: colour/opacity 200 ms (`duration-200`), panels 240 ms (`--duration-base`), `--ease-out`.
+- Micro-interactions: Premium tactile feedback. Buttons use physical scaling (`hover:scale-[1.02] active:scale-[0.98]`); vehicle cards and pagination use a gentle lift (`hover:-translate-y-1` or `hover:scale-105`) with shadow expansion to establish interactivity.
+- **No scroll-reveal, excessive bounce, image zoom, or parallax.** Content is visible in the server HTML.
 - `prefers-reduced-motion: reduce` disables transitions and animated skeletons; spinners remain as progress feedback.
 
 ## 6. Components (in `src/components/ui`)

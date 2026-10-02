@@ -147,22 +147,22 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
 
   const priceBlock = (
     <div>
-      <p className="tabular text-3xl font-bold leading-none text-foreground">
+      <p className="tabular text-4xl font-black tracking-tight text-foreground">
         {formatPrice(v.price)}
         {reduced ? (
-          <span className="ml-2 align-middle text-base font-normal text-muted-foreground line-through" aria-label={`was ${formatPrice(v.previousPrice!)}`}>
+          <span className="ml-3 align-middle text-lg font-medium text-muted-foreground line-through" aria-label={`was ${formatPrice(v.previousPrice!)}`}>
             {formatPrice(v.previousPrice!)}
           </span>
         ) : null}
       </p>
       {reduced ? (
-        <Badge variant="success" className="mt-2">
+        <Badge variant="success" className="mt-3 font-bold px-3 py-1 text-sm shadow-sm">
           Price drop: {formatPrice(v.previousPrice! - v.price)} off
         </Badge>
       ) : null}
       {v.weeklyEstimate && v.financeAvailable ? (
-        <p className="mt-2 text-sm text-body">
-          From <span className="tabular font-semibold text-foreground">{formatPrice(v.weeklyEstimate)}</span>/week with finance*
+        <p className="mt-3 text-sm font-medium text-body">
+          From <span className="tabular font-bold text-accent text-base">{formatPrice(v.weeklyEstimate)}</span>/week with finance*
         </p>
       ) : null}
     </div>
@@ -224,18 +224,18 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
               ) : null}
 
               <section className="mt-10" aria-labelledby="vdp-specs">
-                <h2 id="vdp-specs" className="text-2xl font-extrabold tracking-tight text-[#0a1e3f] mb-6">
+                <h2 id="vdp-specs" className="text-2xl font-extrabold tracking-tight text-foreground mb-6">
                   Specifications
                 </h2>
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
                   <dl className="grid grid-cols-1 sm:grid-cols-2">
                     {specs.map((s) => (
                       <div 
                         key={s.label} 
-                        className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-[#e5e7eb] sm:even:border-l sm:even:border-[#e5e7eb] hover:bg-[#f8faff] transition-colors"
+                        className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border sm:even:border-l sm:even:border-border hover:bg-muted/50 transition-colors"
                       >
-                        <dt className="text-[14px] text-[#6b7280] font-medium">{s.label}</dt>
-                        <dd className="tabular-nums text-right text-[15px] font-bold text-[#111827]">{s.value}</dd>
+                        <dt className="text-[14px] text-muted-foreground font-semibold">{s.label}</dt>
+                        <dd className="tabular-nums text-right text-[15px] font-bold text-foreground">{s.value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -244,18 +244,18 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
 
               {featureGroups.length > 0 ? (
                 <section className="mt-10" aria-labelledby="vdp-features">
-                  <h2 id="vdp-features" className="text-2xl font-extrabold tracking-tight text-[#0a1e3f] mb-6">
+                  <h2 id="vdp-features" className="text-2xl font-extrabold tracking-tight text-foreground mb-6">
                     Features
                   </h2>
-                  <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden p-6 sm:p-8">
+                  <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden p-6 sm:p-8">
                     <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                       {featureGroups.map((g) => (
                         <div key={g.cat}>
-                          <h3 className="mb-4 text-[13px] font-bold text-[#0a1e3f] uppercase tracking-wider">{FEATURE_GROUP_LABELS[g.cat]}</h3>
+                          <h3 className="mb-4 text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{FEATURE_GROUP_LABELS[g.cat]}</h3>
                           <ul className="space-y-3">
                             {g.items.map((f) => (
-                              <li key={f.id} className="flex items-start gap-3 text-[14px] text-[#4b5563] font-medium leading-snug">
-                                <Check className="mt-[2px] size-4 shrink-0 text-[#0A7AF5]" aria-hidden="true" />
+                              <li key={f.id} className="flex items-start gap-3 text-[14px] text-body font-medium leading-snug">
+                                <Check className="mt-[2px] size-4 shrink-0 text-accent" aria-hidden="true" />
                                 {f.name}
                               </li>
                             ))}
@@ -269,22 +269,22 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
 
               {v.description ? (
                 <section className="mt-10" aria-labelledby="vdp-description">
-                  <h2 id="vdp-description" className="text-xl">
+                  <h2 id="vdp-description" className="text-2xl font-extrabold tracking-tight text-foreground mb-6">
                     About this car
                   </h2>
-                  <p className="mt-4 max-w-prose whitespace-pre-line leading-relaxed text-body">{v.description}</p>
+                  <p className="max-w-prose whitespace-pre-line leading-relaxed text-body text-[15px] font-medium">{v.description}</p>
                 </section>
               ) : null}
 
               {assurances.length > 0 ? (
-                <section className="mt-10 rounded-lg border border-border bg-card p-5" aria-labelledby="vdp-assurance">
-                  <h2 id="vdp-assurance" className="text-xl">
+                <section className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-sm" aria-labelledby="vdp-assurance">
+                  <h2 id="vdp-assurance" className="text-xl font-bold tracking-tight text-foreground">
                     What you get
                   </h2>
-                  <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <ul className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {assurances.map((a) => (
-                      <li key={a.text} className="flex items-start gap-2.5 text-sm text-body">
-                        <a.icon className="mt-0.5 size-5 shrink-0 text-accent-bright" aria-hidden="true" />
+                      <li key={a.text} className="flex items-start gap-3 text-[15px] font-medium text-body">
+                        <a.icon className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
                         {a.text}
                       </li>
                     ))}
@@ -295,9 +295,9 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
 
             <aside className="lg:relative" aria-label="Price and enquiry">
               <div className="space-y-6 lg:sticky lg:top-[calc(var(--header-height)+1.5rem)]">
-                <div className="rounded-lg border border-border bg-card p-5 shadow-card">
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-md shadow-black/5">
                   {priceBlock}
-                  <div className="mt-5">
+                  <div className="mt-6">
                     {!isSold ? (
                       <VdpLeadActions
                         vehicleId={v.id}
@@ -315,7 +315,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<Pa
                       </ButtonLink>
                     )}
                   </div>
-                  {v.weeklyEstimate && v.financeAvailable ? <p className="mt-4 text-xs text-muted-foreground">*Estimate only. {financeParams.disclaimer}</p> : null}
+                  {v.weeklyEstimate && v.financeAvailable ? <p className="mt-4 text-[13px] font-medium text-muted-foreground">*Estimate only. {financeParams.disclaimer}</p> : null}
                 </div>
 
                 {v.financeAvailable && !isSold ? <FinanceCalculator price={v.price} params={financeParams} /> : null}

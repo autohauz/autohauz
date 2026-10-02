@@ -17,16 +17,14 @@ const PRIMARY = [
 ];
 
 /**
- * Public header — a navy band (dark surface) with the dark logo variant, the
- * "Buy cars" disclosure menu, primary links, the phone number when configured
- * and one accent CTA. Sticky, 72 px, with a skip link as the first focusable.
+ * Premium public header.
  */
 export async function SiteHeader() {
   const [makes, business] = await Promise.all([getMakes(), getBusinessProfile()]);
   const phone = business.phone || null;
 
   return (
-    <header className="dark sticky top-0 z-[var(--z-header)] w-full border-b border-border bg-background text-foreground">
+    <header className="dark sticky top-0 z-[var(--z-header)] w-full border-b border-border bg-background/95 backdrop-blur-md text-foreground">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[var(--z-modal)] focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-card-foreground"
@@ -34,28 +32,28 @@ export async function SiteHeader() {
         Skip to content
       </a>
       <Container className="flex h-[var(--header-height)] items-center justify-between gap-6">
-        <Link href="/" className="flex shrink-0 items-center" aria-label={`${site.brandName} home`}>
+        <Link href="/" className="flex shrink-0 items-center transition-opacity hover:opacity-90" aria-label={`${site.brandName} home`}>
           <BrandLogo variant="dark" height={48} priority />
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-1.5 lg:flex">
           <BuyCarsMenu makes={makes} />
           {PRIMARY.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex h-10 items-center rounded-full px-4 text-sm font-semibold tracking-wide text-foreground transition-all hover:bg-white/10"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
           {phone ? (
             <a
               href={telHref(phone)}
-              className="hidden h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted md:inline-flex"
+              className="hidden h-10 items-center gap-2 rounded-full px-4 text-sm font-bold tracking-wide text-foreground transition-all hover:bg-white/10 md:inline-flex"
             >
               <Phone className="size-4 text-accent-bright" aria-hidden="true" />
               {formatPhoneForDisplay(phone)}
@@ -63,9 +61,9 @@ export async function SiteHeader() {
           ) : null}
           <Link
             href="/used-cars"
-            className="hidden h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover sm:inline-flex"
+            className="hidden h-10 items-center rounded-full bg-accent px-6 text-sm font-bold tracking-wide text-white shadow-md shadow-accent/20 transition-all hover:scale-105 hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/30 sm:inline-flex"
           >
-            Browse cars
+            Browse Inventory
           </Link>
           <MobileNav makes={makes} phone={phone} />
         </div>

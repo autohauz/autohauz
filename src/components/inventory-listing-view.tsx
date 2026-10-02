@@ -83,7 +83,7 @@ export async function InventoryListingView({
                   <Link
                     href={chip.href}
                     scroll={false}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-sm bg-accent-soft py-1 pl-3 pr-2 text-sm font-medium text-accent-soft-foreground transition-colors hover:bg-azure-100/70"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent/10 py-1 pl-3 pr-2 text-sm font-semibold tracking-wide text-accent transition-all hover:bg-accent/20"
                   >
                     <span className="sr-only">Remove filter: </span>
                     {chip.label}
@@ -93,7 +93,7 @@ export async function InventoryListingView({
               ))}
               {chips.length > 1 ? (
                 <li>
-                  <Link href={basePath} scroll={false} className="inline-flex min-h-8 items-center px-2 text-sm font-semibold text-accent underline-offset-4 hover:underline">
+                  <Link href={basePath} scroll={false} className="inline-flex min-h-8 items-center px-2 text-sm font-bold tracking-wide text-accent underline-offset-4 hover:underline">
                     Clear all
                   </Link>
                 </li>
@@ -211,8 +211,8 @@ function Pagination({ page, totalPages, sp, basePath }: { page: number; totalPag
     const qs = params.toString();
     return `${basePath}${qs ? `?${qs}` : ""}`;
   };
-  const item = "inline-flex size-10 items-center justify-center rounded-md border text-sm font-medium transition-colors";
-  const idle = "border-border bg-card text-foreground hover:bg-muted";
+  const item = "inline-flex size-10 items-center justify-center rounded-full border text-sm font-bold transition-all duration-200 hover:scale-105";
+  const idle = "border-border bg-card text-foreground hover:bg-neutral-100 hover:border-accent/30 hover:text-accent";
 
   return (
     <>
@@ -220,21 +220,21 @@ function Pagination({ page, totalPages, sp, basePath }: { page: number; totalPag
       {page > 1 ? <link rel="prev" href={build(page - 1)} /> : null}
       {page < totalPages ? <link rel="next" href={build(page + 1)} /> : null}
 
-      <nav className="mt-10 flex items-center justify-center gap-1.5" aria-label="Pagination">
+      <nav className="mt-12 flex items-center justify-center gap-2" aria-label="Pagination">
         {page > 1 ? (
-          <Link href={build(page - 1)} rel="prev" className={cn(item, idle, "px-3")}>
+          <Link href={build(page - 1)} rel="prev" className={cn(item, idle, "px-4 w-auto")}>
             <ChevronLeft className="size-4" aria-hidden="true" />
-            <span className="sr-only sm:not-sr-only sm:ml-1">Previous</span>
+            <span className="sr-only sm:not-sr-only sm:ml-1.5">Previous</span>
           </Link>
         ) : null}
 
         {pageWindow(page, totalPages).map((p, i) =>
           p === null ? (
-            <span key={`gap-${i}`} className="px-1 text-muted-foreground" aria-hidden="true">
+            <span key={`gap-${i}`} className="px-1 text-muted-foreground font-bold" aria-hidden="true">
               …
             </span>
           ) : p === page ? (
-            <span key={p} aria-current="page" className={cn(item, "tabular border-primary bg-primary text-primary-foreground")}>
+            <span key={p} aria-current="page" className={cn(item, "tabular border-accent bg-accent text-white shadow-md shadow-accent/30")}>
               {p}
             </span>
           ) : (
@@ -245,8 +245,8 @@ function Pagination({ page, totalPages, sp, basePath }: { page: number; totalPag
         )}
 
         {page < totalPages ? (
-          <Link href={build(page + 1)} rel="next" className={cn(item, idle, "px-3")}>
-            <span className="sr-only sm:not-sr-only sm:mr-1">Next</span>
+          <Link href={build(page + 1)} rel="next" className={cn(item, idle, "px-4 w-auto")}>
+            <span className="sr-only sm:not-sr-only sm:mr-1.5">Next</span>
             <ChevronRight className="size-4" aria-hidden="true" />
           </Link>
         ) : null}

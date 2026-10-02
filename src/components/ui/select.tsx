@@ -18,7 +18,7 @@ function Select({ className, wrapperClassName, children, ...props }: SelectProps
       <select
         data-slot="select"
         className={cn(
-          "h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-card py-2 pl-3 pr-9 text-base text-foreground transition-colors duration-150 focus-visible:border-accent-bright disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground aria-invalid:border-danger md:h-10 md:text-sm",
+          "h-11 w-full min-w-0 appearance-none rounded-md border border-input bg-card py-2 pl-3 pr-9 text-base text-foreground shadow-sm transition-all duration-200 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground aria-invalid:border-danger md:h-11 md:pl-4 md:text-sm",
           className,
         )}
         {...props}

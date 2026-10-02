@@ -204,7 +204,17 @@ export async function SiteFooter() {
           {address ? (
             <div className="flex flex-col lg:border-l lg:border-white/10 lg:pl-12 lg:ml-[-1rem]">
               <h2 className="mb-5 text-[15px] font-bold text-white">Our location</h2>
-              <address className="flex items-start gap-3 rounded-lg bg-white/5 p-6 text-[14px] not-italic leading-relaxed text-white">
+              <div className="relative mb-4 h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-sm group">
+                <iframe
+                  title={`Google Maps showing ${address}`}
+                  className="absolute inset-0 h-full w-full border-0"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <address className="flex items-start gap-3 rounded-lg bg-white/5 p-4 text-[14px] not-italic leading-relaxed text-white">
                 <MapPin className="mt-0.5 size-5 shrink-0 text-[#2B8BF6]" aria-hidden="true" />
                 <span>
                   {business.address.street}
@@ -213,7 +223,7 @@ export async function SiteFooter() {
                 </span>
               </address>
               {directionsUrl ? (
-                <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex h-[46px] w-fit items-center justify-center gap-2 rounded-md border border-white/20 px-5 text-[14px] font-medium text-white transition-colors hover:bg-white/10">
+                <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex h-[44px] w-full items-center justify-center gap-2 rounded-full border border-white/20 px-5 text-[14px] font-bold tracking-wide text-white transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98]">
                   <MapPin className="size-4" aria-hidden="true" />
                   Get directions <ExternalLink className="size-4" aria-hidden="true" />
                   <span className="sr-only">(opens Google Maps in a new tab)</span>

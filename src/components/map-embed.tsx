@@ -5,19 +5,22 @@ import { MapPin } from "lucide-react";
 /**
  * Click-to-load Google Map link.
  */
-export function MapEmbed({}: { address: string }) {
-  const mapUrl = "https://maps.app.goo.gl/tteBK4xGkyq7zKye7";
+export function MapEmbed({ address }: { address: string }) {
+  const query = encodeURIComponent(address);
+  // Using the standard embed URL format which works without a dedicated API key for basic place markers
+  const mapUrl = `https://maps.google.com/maps?q=${query}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
 
   return (
-    <a
-      href={mapUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex h-60 w-full flex-col items-center justify-center gap-2 rounded-md border border-border bg-muted text-sm font-semibold text-foreground transition-colors hover:bg-muted/70"
-    >
-      <MapPin className="size-6 text-accent-bright" aria-hidden="true" />
-      View on Google Maps
-      <span className="text-xs font-normal text-muted-foreground">Opens in new tab</span>
-    </a>
+    <div className="relative h-60 w-full overflow-hidden rounded-xl border border-border shadow-sm group">
+      <iframe
+        title={`Google Maps showing ${address}`}
+        className="absolute inset-0 h-full w-full border-0"
+        src={mapUrl}
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      {/* Invisible overlay link to still allow the entire block to act as a map link if desired, or let users interact with the iframe */}
+    </div>
   );
 }
