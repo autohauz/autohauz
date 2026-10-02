@@ -5,7 +5,7 @@ import { MapPin } from "lucide-react";
 /**
  * Click-to-load Google Map link.
  */
-export function MapEmbed({ address }: { address: string }) {
+export function MapEmbed({}: { address: string }) {
   const mapUrl = "https://maps.app.goo.gl/tteBK4xGkyq7zKye7";
 
   return (

@@ -48,3 +48,11 @@ supabase/.temp/
 
 create_admin.js
 update_admin.js
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

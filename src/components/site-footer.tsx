@@ -8,7 +8,7 @@ import { Container } from "@/components/ui/container";
 import { NAV_BODY_TYPES, BODY_TYPE_LABELS, bodyTypeHref, makeHref } from "@/lib/nav";
 import { socialProfiles, type SocialNetwork } from "@/lib/social-links";
 import { site } from "@/config/site";
-import { formatAddress, hasAddress } from "@/config/business";
+import { formatAddress } from "@/config/business";
 import { formatPhoneForDisplay, telHref } from "@/lib/phone";
 
 const COMPANY_LINKS = [
