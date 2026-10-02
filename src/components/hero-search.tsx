@@ -50,18 +50,19 @@ export function HeroSearch({ makes }: { makes: Make[] }) {
     router.push(qs ? `/used-cars?${qs}` : "/used-cars");
   }
 
-  const labelClass = "block text-[11px] font-bold text-[#111827] px-3 mb-1 uppercase tracking-wide";
-  const selectClass = "h-auto w-full border-0 bg-transparent py-1 pl-3 pr-8 text-[15px] text-[#4b5563] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0";
+  // Premium Airbnb-style input styling
+  const labelClass = "block text-[11px] font-bold text-neutral-800 px-4 mb-0.5 uppercase tracking-wider";
+  const selectClass = "h-auto w-full cursor-pointer border-0 bg-transparent py-1 pl-4 pr-10 text-[15px] font-medium text-neutral-500 shadow-none outline-none ring-0 transition-colors focus:ring-0 focus-visible:ring-0 hover:text-neutral-900";
 
   return (
     <form 
       onSubmit={submit} 
       role="search" 
       aria-label="Search cars" 
-      className="flex flex-col lg:flex-row w-full max-w-5xl items-center rounded-2xl lg:rounded-[100px] bg-white p-2 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-[#e5e7eb]"
+      className="mx-auto flex w-full max-w-5xl flex-col items-center rounded-[2rem] bg-white p-2 shadow-2xl shadow-black/10 ring-1 ring-black/5 transition-all lg:flex-row lg:rounded-full lg:pl-4"
     >
-      <div className="flex w-full flex-col sm:flex-row">
-        <div className="flex-1 py-3 lg:py-2 border-b sm:border-b-0 sm:border-r border-[#e5e7eb]">
+      <div className="flex w-full flex-col sm:flex-row lg:flex-1">
+        <div className="group relative flex-1 cursor-pointer rounded-2xl p-2 transition-colors hover:bg-neutral-100 lg:rounded-full lg:p-3">
           <label htmlFor={`${id}-make`} className={labelClass}>Make</label>
           <Select id={`${id}-make`} name="make" value={make} onChange={(e) => onMakeChange(e.target.value)} className={selectClass}>
             <option value="">Any Make</option>
@@ -71,20 +72,26 @@ export function HeroSearch({ makes }: { makes: Make[] }) {
           </Select>
         </div>
 
-        <div className="flex-1 py-3 lg:py-2 relative border-b sm:border-b-0 lg:border-r border-[#e5e7eb]">
+        {/* Divider */}
+        <div className="hidden w-px self-center bg-neutral-200 lg:block lg:h-10" />
+
+        <div className="group relative flex-1 cursor-pointer rounded-2xl p-2 transition-colors hover:bg-neutral-100 lg:rounded-full lg:p-3">
           <label htmlFor={`${id}-model`} className={labelClass}>Model</label>
           <Select id={`${id}-model`} name="model" value={model} onChange={(e) => setModel(e.target.value)} disabled={loadingModels} aria-busy={loadingModels} className={selectClass}>
-            <option value="">{loadingModels ? "Loading models…" : "Any Model"}</option>
+            <option value="">{loadingModels ? "Loading…" : "Any Model"}</option>
             {models.map((m) => (
               <option key={m.slug} value={m.slug}>{m.name}</option>
             ))}
           </Select>
-          {loadingModels ? <Loader2 className="pointer-events-none absolute right-8 top-1/2 size-4 animate-spin text-muted-foreground" aria-hidden="true" /> : null}
+          {loadingModels ? <Loader2 className="pointer-events-none absolute right-8 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden="true" /> : null}
         </div>
       </div>
 
-      <div className="flex w-full flex-col sm:flex-row lg:border-r border-[#e5e7eb]">
-        <div className="flex-1 py-3 lg:py-2 border-b sm:border-b-0 sm:border-r border-[#e5e7eb]">
+      <div className="flex w-full flex-col sm:flex-row lg:flex-1">
+        {/* Divider */}
+        <div className="hidden w-px self-center bg-neutral-200 lg:block lg:h-10" />
+
+        <div className="group relative flex-1 cursor-pointer rounded-2xl p-2 transition-colors hover:bg-neutral-100 lg:rounded-full lg:p-3">
           <label htmlFor={`${id}-price`} className={labelClass}>Price</label>
           <Select id={`${id}-price`} name="price_max" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className={selectClass}>
             <option value="">Any Price</option>
@@ -94,10 +101,13 @@ export function HeroSearch({ makes }: { makes: Make[] }) {
           </Select>
         </div>
 
-        <div className="flex-1 py-3 lg:py-2 lg:border-r-0 lg:pr-2">
+        {/* Divider */}
+        <div className="hidden w-px self-center bg-neutral-200 lg:block lg:h-10" />
+
+        <div className="group relative flex-1 cursor-pointer rounded-2xl p-2 transition-colors hover:bg-neutral-100 lg:rounded-full lg:p-3">
           <label htmlFor={`${id}-body`} className={labelClass}>Body Type</label>
           <Select id={`${id}-body`} name="body" value={bodyType} onChange={(e) => setBodyType(e.target.value)} className={selectClass}>
-            <option value="">Any Body Type</option>
+            <option value="">Any Body</option>
             {NAV_BODY_TYPES.map((b) => (
               <option key={b} value={b}>{BODY_TYPE_LABELS[b]}</option>
             ))}
@@ -105,13 +115,16 @@ export function HeroSearch({ makes }: { makes: Make[] }) {
         </div>
       </div>
 
-      <button
-        type="submit"
-        className="mt-4 lg:mt-0 flex h-14 lg:h-[60px] w-full lg:w-auto shrink-0 items-center justify-center gap-2 rounded-xl lg:rounded-[100px] bg-accent px-8 text-[15px] font-bold text-accent-foreground transition-colors hover:bg-accent/90"
-      >
-        <Search className="size-5 stroke-[2.5]" aria-hidden="true" />
-        Search Cars
-      </button>
+      <div className="mt-4 w-full px-2 pb-2 lg:mt-0 lg:w-auto lg:p-0">
+        <button
+          type="submit"
+          className="flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-[1.5rem] bg-accent px-10 text-[16px] font-bold text-accent-foreground shadow-lg shadow-accent/20 transition-all hover:scale-[1.02] hover:bg-accent/90 active:scale-[0.98] lg:h-[68px] lg:w-auto lg:rounded-full"
+        >
+          <Search className="size-5 stroke-[2.5]" aria-hidden="true" />
+          <span>Search</span>
+        </button>
+      </div>
     </form>
   );
 }
+
