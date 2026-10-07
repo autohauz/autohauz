@@ -251,7 +251,6 @@ export function VehicleForm({
 
         <TabsPanel value="basics" data-step="basics">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <L label="Stock ID"><input name="stockId" defaultValue={v.stock_id} disabled={mode === "edit"} className={inputCls} placeholder="Auto-generated if left blank" /></L>
             <L label="Year *"><input name="year" required type="number" defaultValue={v.year} className={inputCls} /></L>
             
             <L label="Make *">
@@ -326,8 +325,11 @@ export function VehicleForm({
             <L label="Doors"><input name="doors" type="number" defaultValue={v.doors ?? ""} className={inputCls} /></L>
             <L label="Exterior colour"><input name="exteriorColor" defaultValue={v.exterior_color ?? ""} className={inputCls} /></L>
             <L label="Interior"><input name="interior" defaultValue={v.interior ?? ""} className={inputCls} /></L>
-            <L label="VIN">
-              <input name="vin" defaultValue={v.vin ?? ""} className={inputCls} maxLength={17} />
+            <L 
+              label="VIN *" 
+              hint="Crucial for syndication. Without a valid 17-character VIN, this vehicle will be rejected by Google and Meta."
+            >
+              <input name="vin" required minLength={17} maxLength={17} defaultValue={v.vin ?? ""} className={inputCls} />
             </L>
             <L label="Registration"><input name="registration" defaultValue={v.registration ?? ""} className={inputCls} /></L>
             <L label="Rego expiry"><input name="regoExpiry" type="date" defaultValue={v.rego_expiry ?? ""} className={inputCls} /></L>

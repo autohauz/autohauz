@@ -70,12 +70,7 @@ export const vehicleCreateSchema = z.object({
   vin: z
     .string()
     .trim()
-    .optional()
-    .or(z.literal(""))
-    .refine(
-      (v) => !v || v.length === 0 || v.length === 17,
-      { message: "VIN must be exactly 17 characters" },
-    ),
+    .length(17, { message: "VIN must be exactly 17 characters" }),
   registration: z.string().trim().max(20).optional().or(z.literal("")),
   regoExpiry: z.string().date().optional().or(z.literal("")),
   price: z.coerce.number().positive().max(100_000_000),
@@ -134,7 +129,7 @@ export const vehicleCsvRowSchema = z.object({
   seats: optionalPositiveInt(20),
   doors: optionalPositiveInt(10),
   interior: z.string().trim().optional(),
-  vin: z.string().trim().optional(),
+  vin: z.string().trim().length(17, { message: "VIN must be exactly 17 characters" }),
   registration: z.string().trim().optional(),
   rego_expiry: z.string().trim().optional().or(z.literal("")),
   safety_rating: z.string().trim().optional(),
