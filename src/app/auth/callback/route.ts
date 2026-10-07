@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
     if (data.user) {
       const admin = createAdminClient();
 
-      await admin.from("profiles").upsert(deriveProfileFromUser(data.user));
+      const { error: upsertError } = await admin.from("profiles").upsert(deriveProfileFromUser(data.user));
+      if (upsertError) {
+        console.error("[auth/callback] profile upsert failed:", upsertError.message);
+      }
 
       // ── Pending role auto-apply ────────────────────────────────────────────
       // If an admin pre-assigned a role for this email before the user had an

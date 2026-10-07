@@ -31,18 +31,7 @@ export function StaffSignIn() {
       : null
   );
 
-  // On mount: silently clear any stale Supabase session cookies so the login
-  // form starts from a clean state. This handles the "refresh_token_not_found"
-  // infinite-redirect loop that occurs after a database reset.
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        // No valid session — sign out to flush any stale/partial cookies
-        supabase.auth.signOut({ scope: "local" }).catch(() => {});
-      }
-    });
-  }, []);
+
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
