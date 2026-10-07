@@ -32,8 +32,8 @@ export function socialProfiles(social: SocialLinks): Array<{ network: SocialNetw
     facebook: "https://facebook.com/autohauz",
     instagram: "https://instagram.com/autohauz",
     x: "https://x.com/autohauz",
-    youtube: "https://youtube.com/@autohauz",
-    linkedin: "https://linkedin.com/company/autohauz",
+    youtube: "",
+    linkedin: "",
     tiktok: "",
   };
 
