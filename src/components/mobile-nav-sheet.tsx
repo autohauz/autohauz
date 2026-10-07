@@ -14,6 +14,7 @@ const PRIMARY = [
   { href: "/finance", label: "Finance" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contact" },
 ];
 

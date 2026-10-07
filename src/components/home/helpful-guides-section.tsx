@@ -37,7 +37,7 @@ export function HelpfulGuidesSection() {
             </p>
           </div>
           <Link 
-            href="/faqs" 
+            href="/blog" 
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline transition-colors"
           >
             View all articles <ArrowRight className="size-4" />
