@@ -51,7 +51,7 @@ const lenientEnum = <T extends readonly [string, ...string[]]>(values: T) =>
   );
 
 export const vehicleCreateSchema = z.object({
-  stockId: z.string().trim().min(1).max(40),
+  stockId: z.string().trim().max(40).optional().or(z.literal("")),
   makeId: z.string().uuid(),
   modelId: z.string().uuid(),
   variant: z.string().trim().max(80).optional().or(z.literal("")),

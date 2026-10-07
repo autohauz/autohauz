@@ -184,6 +184,9 @@ export async function createVehicle(_prev: unknown, formData: FormData) {
     }
 
     const d = parsed.data;
+    if (!d.stockId) {
+      d.stockId = `STK-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    }
     const supabase = createAdminClient();
 
     // Parse + validate images early so media resolution can run in parallel with the slug build.
