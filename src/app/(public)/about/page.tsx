@@ -66,7 +66,7 @@ export default async function AboutPage() {
               ))}
             </ul>
 
-            {address || business.phone || business.email ? (
+            {address || business.phone || true ? (
               <section className="mt-14 rounded-lg border border-border bg-card p-6" aria-labelledby="visit-heading">
                 <h2 id="visit-heading" className="text-xl">
                   Visit or get in touch
@@ -88,16 +88,14 @@ export default async function AboutPage() {
                       </dd>
                     </div>
                   ) : null}
-                  {business.email ? (
-                    <div>
-                      <dt className="sr-only">Email</dt>
-                      <dd>
-                        <a href={`mailto:${business.email}`} className="underline-offset-4 hover:underline">
-                          {business.email}
-                        </a>
-                      </dd>
-                    </div>
-                  ) : null}
+                  <div>
+                    <dt className="sr-only">Email</dt>
+                    <dd>
+                      <a href="mailto:Sales@autohauz.com.au" className="underline-offset-4 hover:underline">
+                        Sales@autohauz.com.au
+                      </a>
+                    </dd>
+                  </div>
                 </dl>
               </section>
             ) : null}

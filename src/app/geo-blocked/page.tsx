@@ -64,7 +64,7 @@ export default async function GeoBlockedPage() {
   // Contact details come from settings/env only — an unset value hides its
   // button rather than falling back to someone else's number or inbox.
   const business = await getBusinessProfile();
-  const contactEmail = business.email || optionalEnv("CONTACT_EMAIL_TO") || null;
+  const contactEmail = "Sales@autohauz.com.au";
   const whatsappNumber = business.whatsapp || null;
 
   const regions = servedRegions();

@@ -35,7 +35,7 @@ const channelClass = "flex items-center gap-3 rounded-lg border border-border bg
 export default async function ContactPage() {
   const business = await getBusinessProfile();
   const phone = business.phone || null;
-  const email = business.email || null;
+  const email = "Sales@autohauz.com.au";
   const whatsappUrl = business.whatsapp ? buildWhatsAppUrl(business.whatsapp, "Hi, I have a question.") : null;
   const address = hasAddress(business.address) ? formatAddress(business.address) : null;
   const hours = DAYS.filter(([key]) => business.hours[key]);

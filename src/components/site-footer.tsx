@@ -105,26 +105,22 @@ export async function SiteFooter() {
               Quality used cars, inspected before listing and priced transparently. Enquire online, arrange an inspection or talk to us about finance and trade-ins.
             </p>
             {/* Contact details come only from the business profile (Admin → Settings). */}
-            {business.phone || business.email ? (
-              <ul className="mt-6 flex flex-col gap-4">
-                {business.phone ? (
-                  <li>
-                    <a href={telHref(business.phone)} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
-                      <Phone className="size-4 text-[#2B8BF6]" aria-hidden="true" />
-                      {formatPhoneForDisplay(business.phone)}
-                    </a>
-                  </li>
-                ) : null}
-                {business.email ? (
-                  <li>
-                    <a href={`mailto:${business.email}`} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
-                      <Mail className="size-4 text-[#2B8BF6]" aria-hidden="true" />
-                      {business.email}
-                    </a>
-                  </li>
-                ) : null}
-              </ul>
-            ) : null}
+            <ul className="mt-6 flex flex-col gap-4">
+              {business.phone ? (
+                <li>
+                  <a href={telHref(business.phone)} className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
+                    <Phone className="size-4 text-[#2B8BF6]" aria-hidden="true" />
+                    {formatPhoneForDisplay(business.phone)}
+                  </a>
+                </li>
+              ) : null}
+              <li>
+                <a href="mailto:Sales@autohauz.com.au" className="flex items-center gap-3 text-[14px] text-white hover:text-white/80 transition-colors">
+                  <Mail className="size-4 text-[#2B8BF6]" aria-hidden="true" />
+                  Sales@autohauz.com.au
+                </a>
+              </li>
+            </ul>
             {hours.length > 0 ? (
               <>
                 <hr className="my-6 border-white/10" />

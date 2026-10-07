@@ -152,7 +152,7 @@ export function organizationSchema(business: BusinessProfile) {
           },
         }
       : {}),
-    ...(business.email ? { email: business.email } : {}),
+    email: "Sales@autohauz.com.au",
     ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
@@ -309,7 +309,7 @@ export function autoDealerSchema(business: BusinessProfile) {
     parentOrganization: { "@id": ORGANIZATION_ID },
     currenciesAccepted: site.currency,
     areaServed: { "@type": "Country", name: site.country },
-    ...(business.email ? { email: business.email } : {}),
+    email: "Sales@autohauz.com.au",
     ...(business.phone ? { telephone: business.phone } : {}),
     ...(hasAddress(a)
       ? {
