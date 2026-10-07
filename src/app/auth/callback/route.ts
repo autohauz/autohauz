@@ -6,6 +6,8 @@ import { sendWelcomeEmail } from "@/lib/email/ses";
 import { deriveProfileFromUser } from "@/lib/auth/profile";
 import { isStaffRole } from "@/lib/security/permissions";
 
+import { getStaffRole } from "@/lib/security/auth";
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -24,6 +26,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("OAuth exchange failed:", error.message);
+      // Fallback: The code may have been consumed by a concurrent request/prefetch.
+      // If we already have a valid session, proceed normally.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        return NextResponse.redirect(new URL(destination, requestUrl.origin));
+      }
+
       return NextResponse.redirect(
         new URL("/auth/sign-in?error=auth_failed", requestUrl.origin),
       );
@@ -83,6 +92,16 @@ export async function GET(request: NextRequest) {
         }
       }
       // ── End pending role ───────────────────────────────────────────────────
+
+      // ── Enforce Admin Access ───────────────────────────────────────────────
+      const role = await getStaffRole(data.user);
+      if (!role) {
+        // They authenticated with Google, but have no staff role.
+        await supabase.auth.signOut();
+        return NextResponse.redirect(
+          new URL("/auth/sign-in?error=unauthorized", requestUrl.origin),
+        );
+      }
     }
   }
 

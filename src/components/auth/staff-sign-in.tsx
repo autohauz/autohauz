@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 
+import { signInAction } from "./actions";
+
 /** Staff-only sign-in (there are no buyer accounts). Email + password. */
 export function StaffSignIn() {
   const params = useSearchParams();
@@ -31,20 +33,30 @@ export function StaffSignIn() {
       : null
   );
 
+  useEffect(() => {
+    // If the user was redirected here for lacking permission, make sure
+    // their invalid session is completely destroyed on the client.
+    if (urlError === "unauthorized") {
+      createClient().auth.signOut().catch(() => {});
+    }
+  }, [urlError]);
+
 
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const supabase = createClient();
+    
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(signInError.message);
+      const result = await signInAction(email, password);
+      
+      if (result.error) {
+        setError(result.error);
         setLoading(false);
         return;
       }
+      
       // Full navigation so the server picks up the new session cookies.
       window.location.href = redirectTo;
     } catch (err) {
